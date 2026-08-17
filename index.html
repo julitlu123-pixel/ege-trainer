@@ -265,6 +265,11 @@
       overflow-wrap: break-word !important;
       font-size: 1.05em;
     }
+    .katex-error {
+      color: inherit !important;
+      background: none !important;
+      border: none !important;
+    }
 
     .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
 
@@ -801,7 +806,8 @@
           { left: '$$', right: '$$', display: true },
           { left: '$', right: '$', display: false }
         ],
-        throwOnError: false
+        throwOnError: false,
+        errorColor: 'inherit'
       });
     }
   }
@@ -909,7 +915,63 @@
     return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
   }
 
-  // БЕЗУПРЕЧНЫЙ ПАРСЕР И РЕНДЕР МАТЕМАТИКИ И ТЕКСТА
+  // ТОЧНЫЙ ТОКЕНИЗАТОР И ПАРСЕР МАТЕМАТИКИ И ТЕКСТА
+  function parseSegmentToMath(segment) {
+    if (!segment) return '';
+    if (segment.includes('$')) return segment;
+
+    // Заменяем \quad на пробелы
+    segment = segment.replace(/\\quad/g, ' ');
+
+    // 1. Форматируем углы/градусы: (90^\circ) -> ($90^\circ$)
+    segment = segment.replace(/(\d+)\^\\circ/g, '$$$1^\\circ$$');
+
+    // 2. Изолируем явные математические уравнения типа d = a\sqrt{2} или d^2 = a^2 + b^2
+    // Находим части с латинскими переменными и формулами без кириллицы
+    const tokens = segment.split(/([а-яА-ЯёЁ]+[^а-яА-ЯёЁ\(\)]*)/g);
+    
+    let result = tokens.map(token => {
+      if (/[а-яА-ЯёЁ]/.test(token)) {
+        // Русский текст — оставляем как текст
+        return token;
+      }
+      
+      let trimmed = token.trim();
+      if (!trimmed) return token;
+
+      // Если содержит явные математические конструкции (LaTeX или переменные со степенями/индексами/равенствами)
+      if (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_') || /^[a-zA-Z0-9\s\+\-\*\/\=\(\)\,\.\:\;\<\>]+$/.test(trimmed)) {
+        // Очищаем формулы внутри скобок: (d_1 = d_2 = d) -> ($d_1 = d_2 = d$)
+        if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+          const inner = trimmed.slice(1, -1).trim();
+          if (inner.includes('=') || inner.includes('\\') || inner.includes('^') || inner.includes('_')) {
+            return `($${inner}$)`;
+          }
+        }
+        
+        // Разделяем по точке с запятой, чтобы не заносить ; внутрь KaTeX
+        if (trimmed.includes(';')) {
+          return trimmed.split(';').map(part => {
+            const p = part.trim();
+            if (!p) return '';
+            if (p.includes('\\') || p.includes('^') || p.includes('_') || p.includes('=')) {
+              return `$${p}$`;
+            }
+            return p;
+          }).join('; ');
+        }
+
+        if (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_') || trimmed.includes('=')) {
+          return `$${trimmed}$`;
+        }
+      }
+
+      return token;
+    }).join('');
+
+    return result;
+  }
+
   function formatSmartMathAndText(rawText) {
     if (!rawText) return '';
     let text = rawText.trim();
@@ -918,41 +980,19 @@
       text = text.slice(6, -1);
     }
 
-    // Если весь текст — чистая формула без кириллицы
+    // Если весь текст — абсолютно чистая формула без кириллицы
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
     if (!hasCyrillic && !text.includes('$') && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
       return `$$ ${text} $$`;
     }
 
-    // Заменяем \quad на пробелы
-    text = text.replace(/\\quad/g, '  ');
-
-    // Исправляем градусы и корни без фигурных скобок
-    text = text.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}');
-    text = text.replace(/(\d+)\^\\circ/g, '$1^\\circ');
-
-    // Если знаки $ не были расставлены вручную, авто-оборачиваем математику
-    if (!text.includes('$')) {
-      // 1. Оборачиваем градусы
-      text = text.replace(/(\d+\^\\circ)/g, '$$$1$$');
-
-      // 2. Оборачиваем равенства и формулы, отделяя их от точек с запятой
-      text = text.replace(/(?<!\$)([a-zA-Z][a-zA-Z0-9_\^\{\}]*\s*=\s*[^;\n\)]+)(?!\$)/g, (match) => {
-        if (/[а-яА-ЯёЁ]/.test(match)) return match;
-        return `$${match.trim()}$`;
-      });
-
-      // 3. Оборачиваем оставшиеся LaTeX-теги (\sqrt, \frac, \perp, \parallel)
-      text = text.replace(/(?<!\$)(\\[a-zA-Z]+(\{[\s\S]*?\})*(\^\{?[\s\S]*?\}?)?(_\{?[\s\S]*?\}?)?)(?!\$)/g, '$$$1$$');
-    }
-
-    // Форматирование структуры: разбивка по пунктам списка (1. ... ; 2. ... ; 3. ...)
+    // Разделение структуры списка по пунктам (1. ... ; 2. ... ; 3. ...)
     let parts = text.split(/(?:;\s*(?=\d+\.|\b[А-ЯA-Z]))|\n+/);
     if (parts.length > 1) {
-      return `<div class="formatted-math-text">${parts.map(p => `<span class="formatted-math-line">${p.trim()}</span>`).join('')}</div>`;
+      return `<div class="formatted-math-text">${parts.map(p => `<span class="formatted-math-line">${parseSegmentToMath(p.trim())}</span>`).join('')}</div>`;
     }
 
-    return text;
+    return parseSegmentToMath(text);
   }
 
   function renderPracticeCard() {
