@@ -11,7 +11,6 @@
   <!-- KaTeX для формул -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
   <!-- MathLive: визуальный конструктор формул -->
   <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
@@ -186,7 +185,7 @@
       font-size: 1.25rem;
       font-weight: 600;
       margin-bottom: 16px;
-      line-height: 1.5;
+      line-height: 1.6;
       word-break: break-word;
       overflow-wrap: break-word;
     }
@@ -217,22 +216,31 @@
       border-radius: 8px;
       border-left: 4px solid var(--accent);
       display: none;
-      font-size: 1.12rem;
+      font-size: 1.15rem;
       line-height: 1.7;
       word-break: break-word;
       overflow-wrap: break-word;
       max-width: 100%;
     }
 
-    .formatted-math-text {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .formatted-math-line {
+    .katex-rendered-block {
       display: block;
+      line-height: 1.7;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
-    
+    .katex-rendered-block .katex {
+      white-space: normal !important;
+      word-break: break-word !important;
+      overflow-wrap: break-word !important;
+      font-size: 1.05em;
+    }
+    .katex-rendered-block .katex-display {
+      margin: 0.3em 0 !important;
+      text-align: left !important;
+      white-space: normal !important;
+    }
+
     .result-feedback {
       display: none;
       padding: 10px 14px;
@@ -250,25 +258,6 @@
       background: rgba(99, 102, 241, 0.15);
       color: #a5b4fc;
       border: 1px solid var(--accent);
-    }
-
-    .katex-display {
-      margin: 0.4em 0 !important;
-      text-align: left !important;
-      white-space: normal !important;
-      word-break: break-word !important;
-      overflow-wrap: break-word !important;
-    }
-    .katex {
-      white-space: normal !important;
-      word-break: break-word !important;
-      overflow-wrap: break-word !important;
-      font-size: 1.05em;
-    }
-    .katex-error {
-      color: inherit !important;
-      background: none !important;
-      border: none !important;
     }
 
     .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
@@ -505,21 +494,21 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="margin-bottom:0;">Вопрос / Понятие:</label>
           <div class="input-mode-switcher">
-            <button type="button" class="mode-btn active" id="btn-q-text" onclick="setQuestionMode('text')">📝 Текст + формулы</button>
-            <button type="button" class="mode-btn" id="btn-q-math" onclick="setQuestionMode('math')">📐 Только формула</button>
+            <button type="button" class="mode-btn active" id="btn-q-text" onclick="setQuestionMode('text')">📝 Текст / Формулы</button>
+            <button type="button" class="mode-btn" id="btn-q-math" onclick="setQuestionMode('math')">📐 Word-конструктор</button>
           </div>
         </div>
 
         <div id="q-text-wrapper">
           <div class="math-toolbar">
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$x^n$')">xⁿ Степень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$x_n$')">xₙ Индекс</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\frac{a}{b}$')">½ Дробь</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\sqrt{x}$')">√ Корень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\log_a(b)$')">log</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\cdot$')">· Умножить</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\alpha$')">α</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\Delta$')">Δ</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('x^n')">xⁿ Степень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('x_n')">xₙ Индекс</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\frac{a}{b}')">½ Дробь</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\sqrt{x}')">√ Корень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\log_a(b)')">log</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\cdot')">· Умножить</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\alpha')">α</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\Delta')">Δ</button>
           </div>
           <textarea id="input-question" rows="2" placeholder="например: Основные свойства квадрата (углы, диагонали, площадь):" required></textarea>
         </div>
@@ -581,11 +570,10 @@
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\Delta')">Δ</button>
           </div>
           <math-field id="editor-math-field" math-mode-space="\;"></math-field>
-          <small style="color:var(--text-muted); display:block; margin-top:4px;">Нажимайте кнопки степеней/дробей/логарифмов и вводите формулу визуально.</small>
         </div>
 
         <div id="editor-text-wrapper" style="display:none;">
-          <textarea id="editor-text-field" rows="3" placeholder="Введите определение своими словами..."></textarea>
+          <textarea id="editor-text-field" rows="3" placeholder="Введите определение своими словами или формулы..."></textarea>
         </div>
       </div>
 
@@ -799,19 +787,6 @@
     }
   }
 
-  function renderMath() {
-    if (window.renderMathInElement) {
-      renderMathInElement(document.body, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false }
-        ],
-        throwOnError: false,
-        errorColor: 'inherit'
-      });
-    }
-  }
-
   function updateDeckCount() {
     document.getElementById('count').textContent = deck.length;
   }
@@ -915,84 +890,49 @@
     return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
   }
 
-  // ТОЧНЫЙ ТОКЕНИЗАТОР И ПАРСЕР МАТЕМАТИКИ И ТЕКСТА
-  function parseSegmentToMath(segment) {
-    if (!segment) return '';
-    if (segment.includes('$')) return segment;
-
-    // Заменяем \quad на пробелы
-    segment = segment.replace(/\\quad/g, ' ');
-
-    // 1. Форматируем углы/градусы: (90^\circ) -> ($90^\circ$)
-    segment = segment.replace(/(\d+)\^\\circ/g, '$$$1^\\circ$$');
-
-    // 2. Изолируем явные математические уравнения типа d = a\sqrt{2} или d^2 = a^2 + b^2
-    // Находим части с латинскими переменными и формулами без кириллицы
-    const tokens = segment.split(/([а-яА-ЯёЁ]+[^а-яА-ЯёЁ\(\)]*)/g);
-    
-    let result = tokens.map(token => {
-      if (/[а-яА-ЯёЁ]/.test(token)) {
-        // Русский текст — оставляем как текст
-        return token;
-      }
-      
-      let trimmed = token.trim();
-      if (!trimmed) return token;
-
-      // Если содержит явные математические конструкции (LaTeX или переменные со степенями/индексами/равенствами)
-      if (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_') || /^[a-zA-Z0-9\s\+\-\*\/\=\(\)\,\.\:\;\<\>]+$/.test(trimmed)) {
-        // Очищаем формулы внутри скобок: (d_1 = d_2 = d) -> ($d_1 = d_2 = d$)
-        if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-          const inner = trimmed.slice(1, -1).trim();
-          if (inner.includes('=') || inner.includes('\\') || inner.includes('^') || inner.includes('_')) {
-            return `($${inner}$)`;
-          }
-        }
-        
-        // Разделяем по точке с запятой, чтобы не заносить ; внутрь KaTeX
-        if (trimmed.includes(';')) {
-          return trimmed.split(';').map(part => {
-            const p = part.trim();
-            if (!p) return '';
-            if (p.includes('\\') || p.includes('^') || p.includes('_') || p.includes('=')) {
-              return `$${p}$`;
-            }
-            return p;
-          }).join('; ');
-        }
-
-        if (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_') || trimmed.includes('=')) {
-          return `$${trimmed}$`;
-        }
-      }
-
-      return token;
-    }).join('');
-
-    return result;
-  }
-
-  function formatSmartMathAndText(rawText) {
+  // АВТОМАТИЧЕСКИЙ КОНВЕРТЕР ВСЕГО ТЕКСТА В ПОЛНОЦЕННЫЙ LATEX
+  function convertRawToFullLatex(rawText) {
     if (!rawText) return '';
     let text = rawText.trim();
 
-    if (text.startsWith('\\text{') && text.endsWith('}')) {
-      text = text.slice(6, -1);
-    }
+    // Снимаем внешнюю обертку $...$ или $$...$$, если она уже есть
+    if (text.startsWith('$$') && text.endsWith('$$')) text = text.slice(2, -2).trim();
+    else if (text.startsWith('$') && text.endsWith('$')) text = text.slice(1, -1).trim();
 
-    // Если весь текст — абсолютно чистая формула без кириллицы
-    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    if (!hasCyrillic && !text.includes('$') && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
-      return `$$ ${text} $$`;
-    }
+    // Исправляем корни без фигурных скобок: \sqrt2 -> \sqrt{2}
+    text = text.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}');
 
-    // Разделение структуры списка по пунктам (1. ... ; 2. ... ; 3. ...)
-    let parts = text.split(/(?:;\s*(?=\d+\.|\b[А-ЯA-Z]))|\n+/);
-    if (parts.length > 1) {
-      return `<div class="formatted-math-text">${parts.map(p => `<span class="formatted-math-line">${parseSegmentToMath(p.trim())}</span>`).join('')}</div>`;
-    }
+    // Разбиваем строку на русские слова/фразы и математические токены
+    // Всё, что содержит буквы кириллицы (включая пробелы и знаки), оборачиваем в \text{...}
+    const tokens = text.split(/([а-яА-ЯёЁ][а-яА-ЯёЁ\s\.,!\?:;\(\)\-]*[а-яА-ЯёЁ\.,!\?:;\(\)\-]?)/g);
 
-    return parseSegmentToMath(text);
+    let latexParts = tokens.map(token => {
+      if (!token) return '';
+      if (/[а-яА-ЯёЁ]/.test(token)) {
+        // Убираем лишние вложенные \text
+        let clean = token.replace(/\\text\{/g, '').replace(/\}/g, '');
+        return `\\text{${clean}}`;
+      }
+      return token;
+    });
+
+    return latexParts.join(' ');
+  }
+
+  function renderLatexToElement(elementId, rawContent) {
+    const el = document.getElementById(elementId);
+    if (!el || !window.katex) return;
+
+    const fullLatex = convertRawToFullLatex(rawContent);
+
+    try {
+      katex.render(fullLatex, el, {
+        displayMode: true,
+        throwOnError: false
+      });
+    } catch (err) {
+      el.textContent = rawContent;
+    }
   }
 
   function renderPracticeCard() {
@@ -1019,7 +959,9 @@
             <span class="topic-tag">${card.topic}</span>
           </div>
           
-          <div class="question-box">${formatSmartMathAndText(card.question)}</div>
+          <div class="question-box">
+            <div id="practice-question-render" class="katex-rendered-block"></div>
+          </div>
 
           ${card.image_url ? `
             <div class="card-img-container">
@@ -1062,7 +1004,7 @@
 
           <div class="answer-box" id="answer-content">
             <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Правильный ответ:</div>
-            ${formatSmartMathAndText(card.answer)}
+            <div id="practice-answer-render" class="katex-rendered-block"></div>
           </div>
         </div>
 
@@ -1077,12 +1019,15 @@
         <button style="font-size:0.875rem" onclick="shuffleDeck()">🔀 Перемешать</button>
       </div>
     `;
-    renderMath();
+
+    renderLatexToElement('practice-question-render', card.question);
+    renderLatexToElement('practice-answer-render', card.answer);
   }
 
   function cleanMathString(str) {
     return (str || '')
       .replace(/\s+/g, '')
+      .replace(/\\text\{([^}]*)\}/g, '$1')
       .replace(/\\left/g, '')
       .replace(/\\right/g, '')
       .replace(/\\cdot/g, '')
@@ -1125,7 +1070,6 @@
     document.getElementById('check-btn').style.display = 'none';
     document.getElementById('skip-btn').style.display = 'none';
     document.getElementById('next-btn').style.display = 'block';
-    renderMath();
   }
 
   function skipOrOralAnswer() {
@@ -1303,22 +1247,29 @@
     const list = document.getElementById('card-list');
     list.innerHTML = '';
 
-    deck.forEach(item => {
+    deck.forEach((item, index) => {
       const el = document.createElement('div');
       el.className = 'list-item';
+      const qId = `list-q-${item.id || index}`;
+      const aId = `list-a-${item.id || index}`;
+
       el.innerHTML = `
         <div class="item-content">
           <div class="meta-tags">
             <span class="badge ${getBadgeClass(item.subject)}">${item.subject}</span>
             <span class="topic-tag">${item.topic}</span>
           </div>
-          <div class="item-question">${formatSmartMathAndText(item.question)}</div>
+          <div class="item-question">
+            <div id="${qId}" class="katex-rendered-block"></div>
+          </div>
           ${item.image_url ? `
             <div style="margin: 6px 0;">
               <img src="${item.image_url}" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--border);" alt="Чертёж">
             </div>
           ` : ''}
-          <div class="item-answer">${formatSmartMathAndText(item.answer)}</div>
+          <div class="item-answer">
+            <div id="${aId}" class="katex-rendered-block"></div>
+          </div>
         </div>
         <div class="item-actions">
           <button class="edit-btn" onclick="startEditing(${item.id})" title="Редактировать">✎ Редактировать</button>
@@ -1326,8 +1277,12 @@
         </div>
       `;
       list.appendChild(el);
+
+      setTimeout(() => {
+        renderLatexToElement(qId, item.question);
+        renderLatexToElement(aId, item.answer);
+      }, 0);
     });
-    renderMath();
   }
 
   window.addEventListener('DOMContentLoaded', () => {
