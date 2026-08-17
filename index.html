@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ЕГЭ Тренажёр</title>
+
+  <!-- KaTeX для формул -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- MathLive: визуальный ввод формул как в Word -->
+  <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --danger: #ef4444;
+      --badge-physics: #38bdf8;
+      --badge-math: #ec4899;
+      --badge-rus: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container { width: 100%; max-width: 780px; }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 { font-size: 1.5rem; font-weight: 700; }
+    
+    .tabs { display: flex; gap: 8px; }
+    button {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    button:hover { border-color: var(--accent); }
+    button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; width: 100%; padding: 12px; }
+    button.btn-primary:hover { background: var(--accent-hover); }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Блок фильтров */
+    .filter-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .filter-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+    .subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .topics-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .topic-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .topic-chip input { cursor: pointer; }
+
+    /* Карточки */
+    .flashcard {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .meta-tags { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-Физика { background: rgba(56, 189, 248, 0.15); color: var(--badge-physics); border: 1px solid var(--badge-physics); }
+    .badge-Математика { background: rgba(236, 72, 153, 0.15); color: var(--badge-math); border: 1px solid var(--badge-math); }
+    .badge-Русский { background: rgba(245, 158, 11, 0.15); color: var(--badge-rus); border: 1px solid var(--badge-rus); }
+
+    .topic-tag { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+    .question-box { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; word-break: break-word; }
+    .answer-box {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+      display: none;
+      font-size: 1.15rem;
+      word-break: break-word;
+    }
+    .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; }
+
+    /* Формы */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 6px; }
+    input, textarea, select {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    .math-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+      background: rgba(0,0,0,0.2);
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .math-btn {
+      padding: 4px 10px;
+      font-size: 0.9rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .math-btn:hover { background: var(--accent); color: white; }
+
+    math-field {
+      width: 100%;
+      font-size: 1.2rem;
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      min-height: 48px;
+    }
+    math-field:focus-within { border-color: var(--accent); outline: none; }
+
+    .card-list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+    .list-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .delete-btn { background: transparent; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; }
+
+    .sync-controls {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+    .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🧠 ЕГЭ Тренажёр</h1>
+    <div class="tabs">
+      <button class="active" onclick="switchTab('practice')">Практика</button>
+      <button onclick="switchTab('editor')">База вопросов (<span id="count">0</span>)</button>
+    </div>
+  </header>
+
+  <!-- ВКЛАДКА ТРЕНИРОВКИ -->
+  <section id="view-practice" class="view active">
+    <div class="filter-panel">
+      <div class="filter-title">Предмет:</div>
+      <div class="subject-pills">
+        <div class="pill active" onclick="setSubjectFilter('all', this)">Все предметы</div>
+        <div class="pill" onclick="setSubjectFilter('Физика', this)">Физика</div>
+        <div class="pill" onclick="setSubjectFilter('Математика', this)">Математика</div>
+        <div class="pill" onclick="setSubjectFilter('Русский язык', this)">Русский язык</div>
+      </div>
+
+      <div class="filter-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Разделы:</span>
+        <span style="font-size:0.75rem; cursor:pointer; color:var(--accent);" onclick="toggleAllTopics()">Выбрать все / Снять</span>
+      </div>
+      <div class="topics-container" id="topics-filter-list">
+        <!-- Генерируется через JS -->
+      </div>
+    </div>
+
+    <div id="practice-card-container"></div>
+  </section>
+
+  <!-- ВКЛАДКА РЕДАКТОРА -->
+  <section id="view-editor" class="view">
+    <form id="add-form" onsubmit="addCard(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label>Предмет</label>
+          <select id="input-subject" required>
+            <option value="Физика">Физика</option>
+            <option value="Математика">Математика</option>
+            <option value="Русский язык">Русский язык</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Раздел / Тема</label>
+          <input type="text" id="input-topic" placeholder="например: Оптика или Орфография" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Вопрос / Формулировка</label>
+        <textarea id="input-question" rows="2" placeholder="Закон преломления света / Правило корней -раст-/-рос-" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Правильный ответ (для формул или текста):</label>
+        <div class="math-toolbar">
+          <button type="button" class="math-btn" onclick="insertTemplate('#?^{#?}')">xⁿ Степень</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('#?_{#?}')">xₙ Индекс</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\frac{#?}{#?}')">½ Дробь</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\sqrt{#?}')">√ Корень</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\cdot')">· Умножить</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\pi')">π</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\alpha')">α</button>
+          <button type="button" class="math-btn" onclick="insertTemplate('\\Delta')">Δ</button>
+        </div>
+
+        <math-field id="math-editor"></math-field>
+        <small style="color:var(--text-muted)">Поддерживает как математические формулы, так и обычный русский текст.</small>
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top: 8px;">+ Сохранить в конспект</button>
+    </form>
+
+    <div class="sync-controls">
+      <button type="button" onclick="exportData()">💾 Экспорт JSON</button>
+      <button type="button" onclick="document.getElementById('import-file').click()">📂 Импорт JSON</button>
+      <input type="file" id="import-file" style="display:none" onchange="importData(event)">
+    </div>
+
+    <div class="card-list" id="card-list"></div>
+  </section>
+</div>
+
+<script>
+  const STORAGE_KEY = 'ege_trainer_deck_v2';
+  let deck = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [
+    {
+      id: 1,
+      subject: "Физика",
+      topic: "Электродинамика",
+      question: "Емкость плоского конденсатора",
+      answer: "C = \\frac{\\varepsilon \\varepsilon_0 S}{d}"
+    },
+    {
+      id: 2,
+      subject: "Физика",
+      topic: "Кинематика",
+      question: "Перемещение при равноускоренном движении без учета времени t",
+      answer: "S = \\frac{v^2 - v_0^2}{2a}"
+    },
+    {
+      id: 3,
+      subject: "Математика",
+      topic: "Тригонометрия",
+      question: "Основное тригонометрическое тождество",
+      answer: "\\sin^2(\\alpha) + \\cos^2(\\alpha) = 1"
+    },
+    {
+      id: 4,
+      subject: "Русский язык",
+      topic: "Орфография",
+      question: "Корни с чередованием -ГАР-/-ГОР-",
+      answer: "\\text{Под ударением пишется А (заг\\'ар), без ударения — О (загор\\'елый)}"
+    }
+  ];
+
+  let currentSubject = 'all';
+  let selectedTopics = new Set();
+  let filteredDeck = [];
+  let currentIndex = 0;
+
+  function renderMath() {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+
+  function insertTemplate(template) {
+    const mf = document.getElementById('math-editor');
+    mf.executeCommand(['insert', template]);
+    mf.focus();
+  }
+
+  function saveDeck() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
+    updateDeckCount();
+    updateTopicsFilterUI();
+    filterDeck();
+    renderEditorList();
+  }
+
+  function updateDeckCount() {
+    document.getElementById('count').textContent = deck.length;
+  }
+
+  function setSubjectFilter(subject, el) {
+    currentSubject = subject;
+    document.querySelectorAll('.subject-pills .pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    updateTopicsFilterUI(true);
+    filterDeck();
+  }
+
+  function updateTopicsFilterUI(resetSelection = false) {
+    const container = document.getElementById('topics-filter-list');
+    const availableCards = currentSubject === 'all' 
+      ? deck 
+      : deck.filter(c => c.subject === currentSubject);
+
+    const uniqueTopics = [...new Set(availableCards.map(c => c.topic))].filter(Boolean);
+
+    if (resetSelection || selectedTopics.size === 0) {
+      selectedTopics = new Set(uniqueTopics);
+    } else {
+      // Оставляем только те разделы, которые есть в выбранном предмете
+      selectedTopics = new Set(uniqueTopics.filter(t => selectedTopics.has(t)));
+      if (selectedTopics.size === 0) selectedTopics = new Set(uniqueTopics);
+    }
+
+    container.innerHTML = '';
+    if (uniqueTopics.length === 0) {
+      container.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem">Нет доступных разделов</span>';
+      return;
+    }
+
+    uniqueTopics.forEach(topic => {
+      const label = document.createElement('label');
+      label.className = 'topic-chip';
+      const isChecked = selectedTopics.has(topic);
+      label.innerHTML = `
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTopic('${topic.replace(/'/g, "\\'")}', this.checked)">
+        <span>${topic}</span>
+      `;
+      container.appendChild(label);
+    });
+  }
+
+  function toggleTopic(topic, isChecked) {
+    if (isChecked) {
+      selectedTopics.add(topic);
+    } else {
+      selectedTopics.delete(topic);
+    }
+    filterDeck();
+  }
+
+  function toggleAllTopics() {
+    const availableCards = currentSubject === 'all' 
+      ? deck 
+      : deck.filter(c => c.subject === currentSubject);
+    const uniqueTopics = [...new Set(availableCards.map(c => c.topic))];
+
+    if (selectedTopics.size === uniqueTopics.length) {
+      selectedTopics.clear();
+    } else {
+      selectedTopics = new Set(uniqueTopics);
+    }
+    updateTopicsFilterUI();
+    filterDeck();
+  }
+
+  function filterDeck() {
+    filteredDeck = deck.filter(card => {
+      const matchSubject = currentSubject === 'all' || card.subject === currentSubject;
+      const matchTopic = selectedTopics.has(card.topic);
+      return matchSubject && matchTopic;
+    });
+
+    currentIndex = 0;
+    renderPracticeCard();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+    if (tab === 'practice') {
+      document.querySelector('.tabs button:first-child').classList.add('active');
+      document.getElementById('view-practice').classList.add('active');
+      filterDeck();
+    } else {
+      document.querySelector('.tabs button:last-child').classList.add('active');
+      document.getElementById('view-editor').classList.add('active');
+      renderEditorList();
+    }
+  }
+
+  function getBadgeClass(subj) {
+    if (subj === 'Физика') return 'badge-Физика';
+    if (subj === 'Математика') return 'badge-Математика';
+    return 'badge-Русский';
+  }
+
+  function renderPracticeCard() {
+    const container = document.getElementById('practice-card-container');
+    if (filteredDeck.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <h3>Нет карточек по выбранным фильтрам</h3>
+          <p style="margin-top:8px">Выберите другие разделы или добавьте вопросы в редакторе.</p>
+        </div>`;
+      return;
+    }
+
+    if (currentIndex >= filteredDeck.length) currentIndex = 0;
+    const card = filteredDeck[currentIndex];
+
+    container.innerHTML = `
+      <div class="flashcard">
+        <div>
+          <div class="meta-tags">
+            <span class="badge ${getBadgeClass(card.subject)}">${card.subject}</span>
+            <span class="topic-tag">${card.topic}</span>
+          </div>
+          <div class="question-box">${card.question}</div>
+          <div class="answer-box" id="answer-content">$$ ${card.answer} $$</div>
+        </div>
+        <div class="flashcard-actions">
+          <button id="show-btn" style="flex:1" onclick="toggleAnswer()">Показать ответ</button>
+          <button style="flex:1; display:none" id="next-btn" class="btn-primary" onclick="nextCard()">Следующий вопрос →</button>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="color:var(--text-muted); font-size:0.875rem">Вопрос ${currentIndex + 1} из ${filteredDeck.length}</span>
+        <button style="font-size:0.875rem" onclick="shuffleDeck()">🔀 Перемешать</button>
+      </div>
+    `;
+    renderMath();
+  }
+
+  function toggleAnswer() {
+    document.getElementById('answer-content').style.display = 'block';
+    document.getElementById('show-btn').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'block';
+    renderMath();
+  }
+
+  function nextCard() {
+    currentIndex = (currentIndex + 1) % filteredDeck.length;
+    renderPracticeCard();
+  }
+
+  function shuffleDeck() {
+    for (let i = filteredDeck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filteredDeck[i], filteredDeck[j]] = [filteredDeck[j], filteredDeck[i]];
+    }
+    currentIndex = 0;
+    renderPracticeCard();
+  }
+
+  function addCard(e) {
+    e.preventDefault();
+    const subject = document.getElementById('input-subject').value;
+    const topic = document.getElementById('input-topic').value.trim();
+    const question = document.getElementById('input-question').value.trim();
+    const mathField = document.getElementById('math-editor');
+    let answer = mathField.getValue();
+
+    if (!subject || !topic || !question || !answer) return;
+
+    deck.unshift({ id: Date.now(), subject, topic, question, answer });
+    saveDeck();
+
+    document.getElementById('input-question').value = '';
+    mathField.setValue('');
+    document.getElementById('input-topic').focus();
+  }
+
+  function deleteCard(id) {
+    deck = deck.filter(item => item.id !== id);
+    saveDeck();
+  }
+
+  function renderEditorList() {
+    const list = document.getElementById('card-list');
+    list.innerHTML = '';
+
+    deck.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'list-item';
+      el.innerHTML = `
+        <div style="flex:1">
+          <div class="meta-tags">
+            <span class="badge ${getBadgeClass(item.subject)}">${item.subject}</span>
+            <span class="topic-tag">${item.topic}</span>
+          </div>
+          <h4 style="margin-bottom:8px;">${item.question}</h4>
+          <div>$$ ${item.answer} $$</div>
+        </div>
+        <button class="delete-btn" onclick="deleteCard(${item.id})" title="Удалить">✕</button>
+      `;
+      list.appendChild(el);
+    });
+    renderMath();
+  }
+
+  function exportData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(deck, null, 2));
+    const a = document.createElement('a');
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", `ege_study_base_${new Date().toISOString().slice(0,10)}.json`);
+    a.click();
+  }
+
+  function importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (Array.isArray(imported)) {
+          deck = imported;
+          saveDeck();
+          alert('База вопросов успешно обновлена!');
+        }
+      } catch (err) {
+        alert('Ошибка при импорте файла.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateDeckCount();
+    updateTopicsFilterUI(true);
+    filterDeck();
+    setTimeout(renderMath, 500);
+  });
+</script>
+</body>
+</html>
