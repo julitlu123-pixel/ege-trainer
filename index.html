@@ -44,13 +44,13 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.7;
       padding: 24px 16px;
       display: flex;
       justify-content: center;
     }
 
-    .container { width: 100%; max-width: 920px; }
+    .container { width: 100%; max-width: 860px; }
     
     header {
       display: flex;
@@ -164,7 +164,6 @@
       border-radius: 12px;
       padding: 24px;
       margin-bottom: 16px;
-      overflow-x: hidden;
       width: 100%;
     }
     .meta-tags { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
@@ -186,9 +185,9 @@
       font-size: 1.22rem;
       font-weight: 600;
       margin-bottom: 16px;
-      line-height: 1.6;
+      line-height: 1.7;
       width: 100%;
-      word-break: break-word;
+      word-break: normal;
       overflow-wrap: break-word;
     }
 
@@ -218,35 +217,52 @@
       border-radius: 8px;
       border-left: 4px solid var(--accent);
       display: none;
-      font-size: 1.12rem;
-      line-height: 1.8;
+      font-size: 1.15rem;
+      line-height: 1.75;
       width: 100%;
-      word-break: break-word;
-      overflow-wrap: break-word;
+      max-width: 100%;
     }
 
-    /* Адаптивный блок отображения математики и текста */
-    .katex-rendered-block {
+    /* Полный адаптивный рендеринг KaTeX */
+    .smart-katex-wrapper {
       display: block;
       width: 100%;
+      max-width: 100%;
       line-height: 1.8;
-      word-break: break-word;
+      word-break: normal;
       overflow-wrap: break-word;
-      white-space: normal;
     }
-    .katex-rendered-block .katex {
-      font-size: 1.05em;
-      white-space: normal !important;
-      word-break: break-word !important;
-      overflow-wrap: break-word !important;
-      line-height: 1.6;
-    }
-    .katex-rendered-block .katex-html {
-      white-space: normal !important;
-    }
-    .katex-rendered-block .base {
+    .smart-katex-wrapper .katex {
+      font-size: 1.06em;
       white-space: normal !important;
       display: inline !important;
+    }
+    .smart-katex-wrapper .katex-html {
+      white-space: normal !important;
+      display: inline !important;
+    }
+    .smart-katex-wrapper .base {
+      display: inline-flex !important;
+      flex-wrap: wrap !important;
+      vertical-align: middle !important;
+    }
+    .smart-katex-wrapper .mord, 
+    .smart-katex-wrapper .mbin, 
+    .smart-katex-wrapper .mrel, 
+    .smart-katex-wrapper .mopen, 
+    .smart-katex-wrapper .mclose,
+    .smart-katex-wrapper .mpunct {
+      vertical-align: middle;
+    }
+    .katex-pure-display {
+      display: block;
+      margin: 8px 0;
+      text-align: center;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .katex-pure-display .katex {
+      font-size: 1.15em;
     }
 
     .result-feedback {
@@ -379,27 +395,23 @@
       gap: 16px;
       transition: background 0.2s;
       width: 100%;
-      overflow-x: hidden;
     }
     .list-item:hover { background: var(--card-hover); }
-    .item-content { flex: 1; min-width: 0; width: 100%; }
+    .item-content { flex: 1; min-width: 0; }
     .item-question {
       font-size: 1.05rem;
       font-weight: 600;
       margin-bottom: 8px;
       color: var(--text);
-      word-break: break-word;
-      overflow-wrap: break-word;
+      line-height: 1.6;
     }
     .item-answer {
       font-size: 1rem;
       color: #cbd5e1;
       line-height: 1.7;
       background: rgba(0,0,0,0.2);
-      padding: 14px 16px;
+      padding: 12px 14px;
       border-radius: 6px;
-      word-break: break-word;
-      overflow-wrap: break-word;
       width: 100%;
     }
 
@@ -495,7 +507,7 @@
         </div>
         <div class="form-group">
           <label>Раздел / Тема</label>
-          <input type="text" id="input-topic" placeholder="например: Планиметрия: Подобие треугольников" required>
+          <input type="text" id="input-topic" placeholder="например: Планиметрия: Четырёхугольники" required>
         </div>
       </div>
 
@@ -520,7 +532,7 @@
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\alpha')">α</button>
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\Delta')">Δ</button>
           </div>
-          <textarea id="input-question" rows="2" placeholder="например: III признак подобия треугольников (по трем сторонам):" required></textarea>
+          <textarea id="input-question" rows="2" placeholder="например: Основные свойства квадрата (углы, диагонали, площадь):" required></textarea>
         </div>
 
         <div id="q-math-wrapper" style="display:none;">
@@ -900,74 +912,74 @@
     return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
   }
 
-  // ПОТОЧНЫЙ РЕНДЕР ТЕКСТА И МАТЕМАТИКИ БЕЗ ВЫХОДА ЗА РАМКИ
-  function renderLatexToElement(elementId, rawContent) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-    if (!rawContent) { el.innerHTML = ''; return; }
+  // БЕЗУПРЕЧНЫЙ АДАПТИВНЫЙ РЕНДЕР KATEX
+  function renderSmartLatex(containerEl, rawText) {
+    if (!containerEl || !window.katex) return;
+    containerEl.innerHTML = '';
 
-    let text = rawContent.trim();
-    if (text.startsWith('\\text{') && text.endsWith('}')) {
-      text = text.slice(6, -1);
-    }
+    if (!rawText) return;
+    let text = rawText.trim();
 
-    // Разбиваем строку на части: формулы и обычный текст
-    // 1. Если есть явные $...$
-    // 2. Либо автоматически находим математические фрагменты (дроби, степени, равенства с латиницей)
-    el.innerHTML = '';
+    // Снимаем внешние обертки
+    if (text.startsWith('$$') && text.endsWith('$$')) text = text.slice(2, -2).trim();
+    else if (text.startsWith('$') && text.endsWith('$')) text = text.slice(1, -1).trim();
 
-    // Если нет кириллицы и это чистая формула
+    // Разделяем римские цифры и следующие за ними слова: IIIпризнак -> III признак
+    text = text.replace(/\b(I|II|III|IV|V|VI|VII|VIII|IX|X)([а-яА-ЯёЁ])/g, '$1 $2');
+
+    // Чистая формула без русского текста
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
     if (!hasCyrillic && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
-      const span = document.createElement('span');
+      const mathSpan = document.createElement('div');
+      mathSpan.className = 'katex-pure-display';
       try {
-        katex.render(text.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}'), span, { displayMode: false, throwOnError: false });
-      } catch (e) {
-        span.textContent = text;
+        katex.render(text, mathSpan, { displayMode: true, throwOnError: false });
+      } catch(e) {
+        mathSpan.textContent = text;
       }
-      el.appendChild(span);
+      containerEl.appendChild(mathSpan);
       return;
     }
 
-    // Если смешанный текст (русские слова + математика)
-    // Находим формулы: либо в $...$, либо по ключевым LaTeX-тегам и латинским равенствам
-    const regex = /(\$[^$]+\$|\\[a-zA-Z]+(?:\{[^}]*\}|\d+)*(?:\^\{?[^}]*\}?)?(?:_\{?[^}]*\}?)?|[a-zA-Z][a-zA-Z0-9_\^\{\}]*\s*=\s*[^;\,\n\(\)]+)/g;
+    // Текст со встроенными формулами: парсим на токены
+    const wrapper = document.createElement('div');
+    wrapper.className = 'smart-katex-wrapper';
+
+    // Разбиваем по $...$ или по известным математическим паттернам
+    const pattern = /(\$[^$]+\$|\\[a-zA-Z]+(?:\{[^}]*\}|\^\{?[^}]*\}?|_\{?[^}]*\}?)*|\b[a-zA-Z][a-zA-Z0-9_\^]*\s*=\s*[^;\n\),]+|\b\d+\^\\circ)/g;
     
     let lastIndex = 0;
     let match;
 
-    while ((match = regex.exec(text)) !== null) {
+    while ((match = pattern.exec(text)) !== null) {
       // Текст перед формулой
       if (match.index > lastIndex) {
         const textChunk = text.substring(lastIndex, match.index);
-        const txtNode = document.createTextNode(textChunk);
-        el.appendChild(txtNode);
+        wrapper.appendChild(document.createTextNode(textChunk));
       }
 
-      // Сама формула
-      let mathStr = match[0];
-      if (mathStr.startsWith('$') && mathStr.endsWith('$')) {
-        mathStr = mathStr.slice(1, -1);
+      let mathFormula = match[0];
+      if (mathFormula.startsWith('$') && mathFormula.endsWith('$')) {
+        mathFormula = mathFormula.slice(1, -1);
       }
-      mathStr = mathStr.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}');
 
       const mathSpan = document.createElement('span');
       try {
-        katex.render(mathStr, mathSpan, { displayMode: false, throwOnError: false });
-      } catch (e) {
-        mathSpan.textContent = mathStr;
+        katex.render(mathFormula.trim(), mathSpan, { displayMode: false, throwOnError: false });
+      } catch (err) {
+        mathSpan.textContent = mathFormula;
       }
-      el.appendChild(mathSpan);
+      wrapper.appendChild(mathSpan);
 
-      lastIndex = regex.lastIndex;
+      lastIndex = pattern.lastIndex;
     }
 
-    // Оставшийся текст после последней формулы
+    // Хвост текста
     if (lastIndex < text.length) {
-      const remaining = text.substring(lastIndex);
-      const txtNode = document.createTextNode(remaining);
-      el.appendChild(txtNode);
+      wrapper.appendChild(document.createTextNode(text.substring(lastIndex)));
     }
+
+    containerEl.appendChild(wrapper);
   }
 
   function renderPracticeCard() {
@@ -995,7 +1007,7 @@
           </div>
           
           <div class="question-box">
-            <div id="practice-question-render" class="katex-rendered-block"></div>
+            <div id="practice-question-render"></div>
           </div>
 
           ${card.image_url ? `
@@ -1039,7 +1051,7 @@
 
           <div class="answer-box" id="answer-content">
             <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Правильный ответ:</div>
-            <div id="practice-answer-render" class="katex-rendered-block"></div>
+            <div id="practice-answer-render"></div>
           </div>
         </div>
 
@@ -1055,8 +1067,8 @@
       </div>
     `;
 
-    renderLatexToElement('practice-question-render', card.question);
-    renderLatexToElement('practice-answer-render', card.answer);
+    renderSmartLatex(document.getElementById('practice-question-render'), card.question);
+    renderSmartLatex(document.getElementById('practice-answer-render'), card.answer);
   }
 
   function cleanMathString(str) {
@@ -1295,7 +1307,7 @@
             <span class="topic-tag">${item.topic}</span>
           </div>
           <div class="item-question">
-            <div id="${qId}" class="katex-rendered-block"></div>
+            <div id="${qId}"></div>
           </div>
           ${item.image_url ? `
             <div style="margin: 6px 0;">
@@ -1303,7 +1315,7 @@
             </div>
           ` : ''}
           <div class="item-answer">
-            <div id="${aId}" class="katex-rendered-block"></div>
+            <div id="${aId}"></div>
           </div>
         </div>
         <div class="item-actions">
@@ -1314,8 +1326,8 @@
       list.appendChild(el);
 
       setTimeout(() => {
-        renderLatexToElement(qId, item.question);
-        renderLatexToElement(aId, item.answer);
+        renderSmartLatex(document.getElementById(qId), item.question);
+        renderSmartLatex(document.getElementById(aId), item.answer);
       }, 0);
     });
   }
