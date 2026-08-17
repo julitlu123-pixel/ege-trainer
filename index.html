@@ -187,12 +187,10 @@
       font-weight: 600;
       margin-bottom: 16px;
       line-height: 1.5;
-      white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: break-word;
     }
 
-    /* Стилизация картинок и рисунков */
     .card-img-container {
       margin: 12px 0 16px 0;
       text-align: center;
@@ -214,17 +212,25 @@
 
     .answer-box {
       margin-top: 16px;
-      padding: 16px;
-      background: rgba(0,0,0,0.3);
+      padding: 18px 20px;
+      background: rgba(0,0,0,0.35);
       border-radius: 8px;
       border-left: 4px solid var(--accent);
       display: none;
       font-size: 1.15rem;
-      line-height: 1.6;
-      white-space: pre-wrap;
+      line-height: 1.7;
       word-break: break-word;
       overflow-wrap: break-word;
       max-width: 100%;
+    }
+
+    .formatted-math-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .formatted-math-line {
+      display: block;
     }
     
     .result-feedback {
@@ -247,7 +253,7 @@
     }
 
     .katex-display {
-      margin: 0.5em 0 !important;
+      margin: 0.4em 0 !important;
       text-align: left !important;
       white-space: normal !important;
       word-break: break-word !important;
@@ -257,6 +263,7 @@
       white-space: normal !important;
       word-break: break-word !important;
       overflow-wrap: break-word !important;
+      font-size: 1.08em;
     }
 
     .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
@@ -277,7 +284,6 @@
     }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    /* Поле загрузки картинки */
     .image-uploader-box {
       border: 1px dashed var(--border);
       padding: 12px;
@@ -379,18 +385,16 @@
       font-weight: 600;
       margin-bottom: 8px;
       color: var(--text);
-      white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: break-word;
     }
     .item-answer {
       font-size: 1rem;
       color: #cbd5e1;
-      line-height: 1.5;
+      line-height: 1.6;
       background: rgba(0,0,0,0.2);
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-radius: 6px;
-      white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: break-word;
     }
@@ -491,7 +495,7 @@
         </div>
       </div>
 
-      <!-- ВВОД ВОПРОСА С ПЕРЕКЛЮЧЕНИЕМ -->
+      <!-- ВВОД ВОПРОСА -->
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="margin-bottom:0;">Вопрос / Понятие:</label>
@@ -529,7 +533,7 @@
         </div>
       </div>
 
-      <!-- ПРИКРЕПЛЕНИЕ РИСУНКА / ГРАФИКА -->
+      <!-- ПРИКРЕПЛЕНИЕ РИСУНКА -->
       <div class="form-group">
         <label>Рисунок / График / Чертёж (по желанию):</label>
         <div class="image-uploader-box">
@@ -547,7 +551,7 @@
         </div>
       </div>
 
-      <!-- ВВОД ОТВЕТА С ПЕРЕКЛЮЧЕНИЕМ -->
+      <!-- ВВОД ОТВЕТА -->
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="margin-bottom:0;">Правильный ответ:</label>
@@ -557,7 +561,6 @@
           </div>
         </div>
 
-        <!-- 1. РЕДАКТОР ФОРМУЛ -->
         <div id="editor-math-wrapper">
           <div class="math-toolbar">
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('#?^{#?}')">xⁿ Степень</button>
@@ -576,7 +579,6 @@
           <small style="color:var(--text-muted); display:block; margin-top:4px;">Нажимайте кнопки степеней/дробей/логарифмов и вводите формулу визуально.</small>
         </div>
 
-        <!-- 2. ТЕКСТОВОЕ ПОЛЕ -->
         <div id="editor-text-wrapper" style="display:none;">
           <textarea id="editor-text-field" rows="3" placeholder="Введите определение своими словами..."></textarea>
         </div>
@@ -610,7 +612,6 @@
   let currentPracticeMode = 'math';
   let currentUploadedImageBase64 = '';
 
-  // Обработка картинок
   function updateImagePreview(src) {
     const container = document.getElementById('image-preview-container');
     const img = document.getElementById('preview-img-tag');
@@ -636,7 +637,6 @@
     resizeAndSetImage(file);
   }
 
-  // Вставка скриншота через Ctrl+V
   window.addEventListener('paste', (e) => {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     for (let item of items) {
@@ -677,7 +677,6 @@
     reader.readAsDataURL(file);
   }
 
-  // Переключение режимов вопроса в редакторе
   function setQuestionMode(mode) {
     currentQuestionMode = mode;
     const textWrap = document.getElementById('q-text-wrapper');
@@ -715,7 +714,6 @@
     mf.focus();
   }
 
-  // Переключение режимов ответа в редакторе
   function setEditorAnswerMode(mode) {
     currentEditorMode = mode;
     const mathWrapper = document.getElementById('editor-math-wrapper');
@@ -750,7 +748,6 @@
     mf.focus();
   }
 
-  // Переключение режимов в практике
   function setPracticeAnswerMode(mode) {
     currentPracticeMode = mode;
     const mathWrapper = document.getElementById('practice-math-wrapper');
@@ -912,37 +909,46 @@
     return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
   }
 
-  function formatMixedMathContent(text) {
-    if (!text) return '';
-    if (text.includes('$')) return text;
+  // УМНЫЙ ПАРСЕР И РЕНДЕР ТЕКСТА И ФОРМУЛ
+  function formatSmartMathAndText(rawText) {
+    if (!rawText) return '';
+    let text = rawText.trim();
 
-    if (text.includes(':')) {
-      const parts = text.split(':');
-      const intro = parts[0];
-      let formulaPart = parts.slice(1).join(':').trim();
-      
-      if (formulaPart && (formulaPart.includes('\\') || formulaPart.includes('^') || formulaPart.includes('_') || formulaPart.includes('/') || formulaPart.includes('='))) {
-        return `${intro}: $${formulaPart}$`;
-      }
-    }
-
-    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    if (!hasCyrillic && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
-      return `$${text}$`;
-    }
-
-    return text;
-  }
-
-  function formatMathContent(text) {
-    if (!text) return '';
     if (text.startsWith('\\text{') && text.endsWith('}')) {
       text = text.slice(6, -1);
     }
+
+    // Если весь текст — чистая формула без кириллицы
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    if (!hasCyrillic && !text.includes('$') && (/^[a-zA-Z0-9\\_^{\}\(\)\+\-\*\/\=\s\.\,\<\>\:\;\^\%]+$/.test(text) || text.includes('\\'))) {
+    if (!hasCyrillic && !text.includes('$') && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
       return `$$ ${text} $$`;
     }
+
+    // Заменяем \quad на пробелы
+    text = text.replace(/\\quad/g, '  ');
+
+    // Если знаки $ уже проставлены вручную, просто форматируем списки
+    if (!text.includes('$')) {
+      // Авто-оборачивание формул в $...$
+      // 1. Градусы: 90^\circ -> $90^\circ$
+      text = text.replace(/(\d+\^\\circ)/g, '$$$1$$');
+      
+      // 2. Выражения с равенствами или латинскими буквами: d = a\sqrt{2}, S = a^2 = \frac{1}{2}d^2
+      text = text.replace(/(?<!\$)([a-zA-Z0-9\(\)]+\s*=\s*[^;\n]+)(?!\$)/g, (match) => {
+        if (/[а-яА-ЯёЁ]/.test(match)) return match;
+        return `$${match.trim()}$`;
+      });
+
+      // 3. Одиночные формулы типа a^2, \sqrt{...}, \frac{...}{...}
+      text = text.replace(/(?<!\$)(\\[a-zA-Z]+(\{[^}]*\})*(\^\{?[^}]*\}?)?(_\{?[^}]*\}?)?)(?!\$)/g, '$$$1$$');
+    }
+
+    // Форматирование структуры: разделение по пунктам (1. ...; 2. ... или перенос строк)
+    let parts = text.split(/(?:;\s*(?=\d+\.|\b[А-ЯA-Z]))|\n+/);
+    if (parts.length > 1) {
+      return `<div class="formatted-math-text">${parts.map(p => `<span class="formatted-math-line">${p.trim()}</span>`).join('')}</div>`;
+    }
+
     return text;
   }
 
@@ -970,7 +976,7 @@
             <span class="topic-tag">${card.topic}</span>
           </div>
           
-          <div class="question-box">${formatMixedMathContent(card.question)}</div>
+          <div class="question-box">${formatSmartMathAndText(card.question)}</div>
 
           ${card.image_url ? `
             <div class="card-img-container">
@@ -978,7 +984,6 @@
             </div>
           ` : ''}
           
-          <!-- ВВОД ОТВЕТА В ПРАКТИКЕ С ПЕРЕКЛЮЧЕНИЕМ РЕЖИМОВ -->
           <div class="user-practice-input-section" id="practice-input-block">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <span style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">Ваш ответ:</span>
@@ -989,7 +994,6 @@
               </div>
             </div>
             
-            <!-- Режим формулы -->
             <div id="practice-math-wrapper" style="display:${defaultMode === 'math' ? 'block' : 'none'};">
               <div class="math-toolbar">
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?^{#?}')">xⁿ Степень</button>
@@ -1006,7 +1010,6 @@
               <math-field id="practice-math-input" math-mode-space="\;"></math-field>
             </div>
 
-            <!-- Режим текста -->
             <div id="practice-text-wrapper" style="display:${defaultMode === 'text' ? 'block' : 'none'};">
               <textarea id="practice-text-input" rows="2" placeholder="Напишите ответ своими словами..."></textarea>
             </div>
@@ -1014,10 +1017,9 @@
 
           <div id="practice-feedback" class="result-feedback"></div>
 
-          <!-- ЭТАЛОННЫЙ ОТВЕТ -->
           <div class="answer-box" id="answer-content">
-            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Правильный ответ:</div>
-            ${formatMathContent(card.answer)}
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Правильный ответ:</div>
+            ${formatSmartMathAndText(card.answer)}
           </div>
         </div>
 
@@ -1109,11 +1111,9 @@
     document.getElementById('input-subject').value = card.subject;
     document.getElementById('input-topic').value = card.topic;
     
-    // Вопрос
     setQuestionMode('text');
     document.getElementById('input-question').value = card.question;
     
-    // Рисунок
     if (card.image_url) {
       document.getElementById('input-image-url').value = card.image_url;
       updateImagePreview(card.image_url);
@@ -1121,7 +1121,6 @@
       removeImage();
     }
 
-    // Ответ
     let ans = card.answer;
     const isPureFormula = isFormulaType(ans);
     
@@ -1270,13 +1269,13 @@
             <span class="badge ${getBadgeClass(item.subject)}">${item.subject}</span>
             <span class="topic-tag">${item.topic}</span>
           </div>
-          <div class="item-question">${formatMixedMathContent(item.question)}</div>
+          <div class="item-question">${formatSmartMathAndText(item.question)}</div>
           ${item.image_url ? `
             <div style="margin: 6px 0;">
               <img src="${item.image_url}" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--border);" alt="Чертёж">
             </div>
           ` : ''}
-          <div class="item-answer">${formatMathContent(item.answer)}</div>
+          <div class="item-answer">${formatSmartMathAndText(item.answer)}</div>
         </div>
         <div class="item-actions">
           <button class="edit-btn" onclick="startEditing(${item.id})" title="Редактировать">✎ Редактировать</button>
