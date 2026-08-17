@@ -8,7 +8,7 @@
   <!-- Иконка во вкладке браузера (Атом + Книга) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(45 12 12)'/><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(-45 12 12)'/><circle cx='12' cy='12' r='2' fill='%236366f1'/></svg>">
 
-  <!-- KaTeX для красивого отображения формул -->
+  <!-- KaTeX для формул -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
@@ -192,6 +192,21 @@
       overflow-wrap: break-word;
     }
 
+    /* Стилизация картинок и рисунков */
+    .card-img-container {
+      margin: 12px 0 16px 0;
+      text-align: center;
+    }
+    .card-img {
+      max-width: 100%;
+      max-height: 240px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      padding: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
     .user-practice-input-section {
       margin-top: 18px;
       margin-bottom: 16px;
@@ -262,7 +277,34 @@
     }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    /* Переключатель режимов */
+    /* Поле загрузки картинки */
+    .image-uploader-box {
+      border: 1px dashed var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .image-preview-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .image-preview-wrapper img {
+      max-height: 70px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .remove-img-btn {
+      color: var(--danger);
+      background: transparent;
+      border: 1px solid var(--danger);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+
     .input-mode-switcher {
       display: flex;
       gap: 6px;
@@ -283,7 +325,6 @@
       color: #fff;
     }
 
-    /* Панель формул Word-стиля */
     .math-toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -446,7 +487,7 @@
         </div>
         <div class="form-group">
           <label>Раздел / Тема</label>
-          <input type="text" id="input-topic" placeholder="например: Свойства логарифмов, Кинематика" required>
+          <input type="text" id="input-topic" placeholder="например: Планиметрия: Четырёхугольники" required>
         </div>
       </div>
 
@@ -471,7 +512,7 @@
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\alpha$')">α</button>
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\Delta$')">Δ</button>
           </div>
-          <textarea id="input-question" rows="2" placeholder="например: Перестановка оснований: $a^{\log_c(b)} =$" required></textarea>
+          <textarea id="input-question" rows="2" placeholder="например: Основные свойства квадрата (углы, диагонали, площадь):" required></textarea>
         </div>
 
         <div id="q-math-wrapper" style="display:none;">
@@ -485,6 +526,24 @@
             <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\cos(#?)')">cos</button>
           </div>
           <math-field id="q-math-field" math-mode-space="\;"></math-field>
+        </div>
+      </div>
+
+      <!-- ПРИКРЕПЛЕНИЕ РИСУНКА / ГРАФИКА -->
+      <div class="form-group">
+        <label>Рисунок / График / Чертёж (по желанию):</label>
+        <div class="image-uploader-box">
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="file" id="file-upload-input" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
+            <button type="button" class="mode-btn" onclick="document.getElementById('file-upload-input').click()">📂 Выбрать файл с диска</button>
+            <span style="font-size:0.85rem; color:var(--text-muted);">или нажмите <b>Ctrl+V</b> для вставки скриншота</span>
+          </div>
+          <input type="text" id="input-image-url" placeholder="Или вставьте прямую ссылку на картинку (https://...)" oninput="updateImagePreview(this.value)">
+          
+          <div id="image-preview-container" class="image-preview-wrapper" style="display:none;">
+            <img id="preview-img-tag" src="" alt="Предпросмотр чертежа">
+            <button type="button" class="remove-img-btn" onclick="removeImage()">✕ Удалить рисунок</button>
+          </div>
         </div>
       </div>
 
@@ -549,6 +608,74 @@
   let currentQuestionMode = 'text';
   let currentEditorMode = 'math';
   let currentPracticeMode = 'math';
+  let currentUploadedImageBase64 = '';
+
+  // Обработка картинок
+  function updateImagePreview(src) {
+    const container = document.getElementById('image-preview-container');
+    const img = document.getElementById('preview-img-tag');
+    if (src && src.trim().length > 0) {
+      img.src = src;
+      container.style.display = 'flex';
+      currentUploadedImageBase64 = src;
+    } else {
+      container.style.display = 'none';
+      currentUploadedImageBase64 = '';
+    }
+  }
+
+  function removeImage() {
+    document.getElementById('input-image-url').value = '';
+    document.getElementById('file-upload-input').value = '';
+    updateImagePreview('');
+  }
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    resizeAndSetImage(file);
+  }
+
+  // Вставка скриншота через Ctrl+V
+  window.addEventListener('paste', (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        resizeAndSetImage(file);
+        break;
+      }
+    }
+  });
+
+  function resizeAndSetImage(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 700;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        document.getElementById('input-image-url').value = '';
+        updateImagePreview(dataUrl);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
 
   // Переключение режимов вопроса в редакторе
   function setQuestionMode(mode) {
@@ -785,24 +912,20 @@
     return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
   }
 
-  // Умное форматирование вопросов (автоматически находит формулы в тексте и оборачивает в $)
   function formatMixedMathContent(text) {
     if (!text) return '';
     if (text.includes('$')) return text;
 
-    // Если есть двоеточие, отделяем формулу после двоеточия
     if (text.includes(':')) {
       const parts = text.split(':');
       const intro = parts[0];
       let formulaPart = parts.slice(1).join(':').trim();
       
-      // Если после двоеточия есть признаки формулы
       if (formulaPart && (formulaPart.includes('\\') || formulaPart.includes('^') || formulaPart.includes('_') || formulaPart.includes('/') || formulaPart.includes('='))) {
         return `${intro}: $${formulaPart}$`;
       }
     }
 
-    // Если весь текст — чистая формула
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
     if (!hasCyrillic && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
       return `$${text}$`;
@@ -847,8 +970,13 @@
             <span class="topic-tag">${card.topic}</span>
           </div>
           
-          <!-- Вопрос с авто-рендером формул -->
           <div class="question-box">${formatMixedMathContent(card.question)}</div>
+
+          ${card.image_url ? `
+            <div class="card-img-container">
+              <img src="${card.image_url}" class="card-img" alt="Чертёж к вопросу">
+            </div>
+          ` : ''}
           
           <!-- ВВОД ОТВЕТА В ПРАКТИКЕ С ПЕРЕКЛЮЧЕНИЕМ РЕЖИМОВ -->
           <div class="user-practice-input-section" id="practice-input-block">
@@ -985,6 +1113,14 @@
     setQuestionMode('text');
     document.getElementById('input-question').value = card.question;
     
+    // Рисунок
+    if (card.image_url) {
+      document.getElementById('input-image-url').value = card.image_url;
+      updateImagePreview(card.image_url);
+    } else {
+      removeImage();
+    }
+
     // Ответ
     let ans = card.answer;
     const isPureFormula = isFormulaType(ans);
@@ -1013,6 +1149,7 @@
     document.getElementById('editor-math-field').setValue('');
     document.getElementById('editor-text-field').value = '';
     document.getElementById('q-math-field').setValue('');
+    removeImage();
     const saveBtn = document.getElementById('save-btn');
     saveBtn.textContent = '+ Сохранить в облако Supabase';
     document.getElementById('cancel-edit-btn').style.display = 'none';
@@ -1038,8 +1175,10 @@
       answer = document.getElementById('editor-text-field').value.trim();
     }
 
+    const image_url = currentUploadedImageBase64 || document.getElementById('input-image-url').value.trim() || null;
+
     if (!subject || !topic || !question || !answer) {
-      alert('Пожалуйста, заполните все поля!');
+      alert('Пожалуйста, заполните все обязательные поля!');
       return;
     }
 
@@ -1050,7 +1189,7 @@
         btn.textContent = 'Обновление в облаке...';
         const { data, error } = await supabaseClient
           .from('cards')
-          .update({ subject, topic, question, answer })
+          .update({ subject, topic, question, answer, image_url })
           .eq('id', editingCardId)
           .select();
 
@@ -1065,7 +1204,7 @@
         btn.textContent = 'Сохранение в облако...';
         const { data, error } = await supabaseClient
           .from('cards')
-          .insert([{ subject, topic, question, answer }])
+          .insert([{ subject, topic, question, answer, image_url }])
           .select();
 
         if (error) throw error;
@@ -1077,6 +1216,7 @@
         document.getElementById('q-math-field').setValue('');
         document.getElementById('editor-math-field').setValue('');
         document.getElementById('editor-text-field').value = '';
+        removeImage();
         document.getElementById('input-topic').focus();
       }
 
@@ -1131,6 +1271,11 @@
             <span class="topic-tag">${item.topic}</span>
           </div>
           <div class="item-question">${formatMixedMathContent(item.question)}</div>
+          ${item.image_url ? `
+            <div style="margin: 6px 0;">
+              <img src="${item.image_url}" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--border);" alt="Чертёж">
+            </div>
+          ` : ''}
           <div class="item-answer">${formatMathContent(item.answer)}</div>
         </div>
         <div class="item-actions">
