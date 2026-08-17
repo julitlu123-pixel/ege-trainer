@@ -8,7 +8,7 @@
   <!-- Иконка во вкладке браузера (Атом + Книга) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(45 12 12)'/><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(-45 12 12)'/><circle cx='12' cy='12' r='2' fill='%236366f1'/></svg>">
 
-  <!-- KaTeX для формул -->
+  <!-- KaTeX для красивого отображения формул -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
@@ -64,7 +64,6 @@
 
     .brand-title { display: flex; align-items: center; gap: 10px; }
     
-    /* Красивая иконка атома и книги */
     .brand-logo {
       width: 40px;
       height: 40px;
@@ -193,7 +192,6 @@
       overflow-wrap: break-word;
     }
 
-    /* Блок ввода ответа в практике */
     .user-practice-input-section {
       margin-top: 18px;
       margin-bottom: 16px;
@@ -394,13 +392,10 @@
   <header>
     <div class="brand-title">
       <div class="brand-logo" title="Наука и знания">
-        <!-- SVG Иконка Атома + Книги -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <!-- Атомные орбитали -->
           <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(30 12 12)" stroke="white" opacity="0.85"/>
           <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(-30 12 12)" stroke="white" opacity="0.85"/>
           <circle cx="12" cy="12" r="1.5" fill="white"/>
-          <!-- Книжные страницы внизу -->
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="white" stroke-width="1.6"/>
           <path d="M6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5V4.5A2.5 2.5 0 0 1 6.5 2z" stroke="white" stroke-width="1.6" fill="rgba(255,255,255,0.15)"/>
         </svg>
@@ -451,15 +446,49 @@
         </div>
         <div class="form-group">
           <label>Раздел / Тема</label>
-          <input type="text" id="input-topic" placeholder="например: Тригонометрия, Кинематика" required>
+          <input type="text" id="input-topic" placeholder="например: Свойства логарифмов, Кинематика" required>
         </div>
       </div>
 
+      <!-- ВВОД ВОПРОСА С ПЕРЕКЛЮЧЕНИЕМ -->
       <div class="form-group">
-        <label>Вопрос / Понятие</label>
-        <textarea id="input-question" rows="2" placeholder="Основное тригонометрическое тождество" required></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="margin-bottom:0;">Вопрос / Понятие:</label>
+          <div class="input-mode-switcher">
+            <button type="button" class="mode-btn active" id="btn-q-text" onclick="setQuestionMode('text')">📝 Текст + формулы</button>
+            <button type="button" class="mode-btn" id="btn-q-math" onclick="setQuestionMode('math')">📐 Только формула</button>
+          </div>
+        </div>
+
+        <div id="q-text-wrapper">
+          <div class="math-toolbar">
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$x^n$')">xⁿ Степень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$x_n$')">xₙ Индекс</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\frac{a}{b}$')">½ Дробь</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\sqrt{x}$')">√ Корень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\log_a(b)$')">log</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\cdot$')">· Умножить</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\alpha$')">α</button>
+            <button type="button" class="math-btn" onclick="insertQuestionSnippet('$\\Delta$')">Δ</button>
+          </div>
+          <textarea id="input-question" rows="2" placeholder="например: Перестановка оснований: $a^{\log_c(b)} =$" required></textarea>
+        </div>
+
+        <div id="q-math-wrapper" style="display:none;">
+          <div class="math-toolbar">
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('#?^{#?}')">xⁿ Степень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('#?_{#?}')">xₙ Индекс</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\sqrt{#?}')">√ Корень</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\log_{#?}(#?)')">log</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\sin(#?)')">sin</button>
+            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\cos(#?)')">cos</button>
+          </div>
+          <math-field id="q-math-field" math-mode-space="\;"></math-field>
+        </div>
       </div>
 
+      <!-- ВВОД ОТВЕТА С ПЕРЕКЛЮЧЕНИЕМ -->
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="margin-bottom:0;">Правильный ответ:</label>
@@ -476,17 +505,16 @@
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('#?_{#?}')">xₙ Индекс</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\sqrt{#?}')">√ Корень</button>
+            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\log_{#?}(#?)')">log</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\cdot')">· Умножить</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\sin(#?)')">sin</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\cos(#?)')">cos</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\pi')">π</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\alpha')">α</button>
             <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\Delta')">Δ</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\varepsilon')">ε</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\lambda')">λ</button>
           </div>
           <math-field id="editor-math-field" math-mode-space="\;"></math-field>
-          <small style="color:var(--text-muted); display:block; margin-top:4px;">Нажимайте кнопки степеней/дробей и вводите формулу визуально.</small>
+          <small style="color:var(--text-muted); display:block; margin-top:4px;">Нажимайте кнопки степеней/дробей/логарифмов и вводите формулу визуально.</small>
         </div>
 
         <!-- 2. ТЕКСТОВОЕ ПОЛЕ -->
@@ -518,10 +546,49 @@
   let currentIndex = 0;
   let editingCardId = null;
 
+  let currentQuestionMode = 'text';
   let currentEditorMode = 'math';
   let currentPracticeMode = 'math';
 
-  // Переключение режимов в редакторе
+  // Переключение режимов вопроса в редакторе
+  function setQuestionMode(mode) {
+    currentQuestionMode = mode;
+    const textWrap = document.getElementById('q-text-wrapper');
+    const mathWrap = document.getElementById('q-math-wrapper');
+    const btnText = document.getElementById('btn-q-text');
+    const btnMath = document.getElementById('btn-q-math');
+
+    if (mode === 'text') {
+      textWrap.style.display = 'block';
+      mathWrap.style.display = 'none';
+      btnText.classList.add('active');
+      btnMath.classList.remove('active');
+    } else {
+      textWrap.style.display = 'none';
+      mathWrap.style.display = 'block';
+      btnText.classList.remove('active');
+      btnMath.classList.add('active');
+    }
+  }
+
+  function insertQuestionSnippet(snippet) {
+    const textarea = document.getElementById('input-question');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+
+    textarea.value = text.substring(0, start) + snippet + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+  }
+
+  function insertQuestionMathTemplate(template) {
+    const mf = document.getElementById('q-math-field');
+    mf.executeCommand(['insert', template]);
+    mf.focus();
+  }
+
+  // Переключение режимов ответа в редакторе
   function setEditorAnswerMode(mode) {
     currentEditorMode = mode;
     const mathWrapper = document.getElementById('editor-math-wrapper');
@@ -715,7 +782,33 @@
     if (!text) return false;
     if (text.startsWith('\\text{') && text.endsWith('}')) return false;
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^');
+    return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
+  }
+
+  // Умное форматирование вопросов (автоматически находит формулы в тексте и оборачивает в $)
+  function formatMixedMathContent(text) {
+    if (!text) return '';
+    if (text.includes('$')) return text;
+
+    // Если есть двоеточие, отделяем формулу после двоеточия
+    if (text.includes(':')) {
+      const parts = text.split(':');
+      const intro = parts[0];
+      let formulaPart = parts.slice(1).join(':').trim();
+      
+      // Если после двоеточия есть признаки формулы
+      if (formulaPart && (formulaPart.includes('\\') || formulaPart.includes('^') || formulaPart.includes('_') || formulaPart.includes('/') || formulaPart.includes('='))) {
+        return `${intro}: $${formulaPart}$`;
+      }
+    }
+
+    // Если весь текст — чистая формула
+    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
+    if (!hasCyrillic && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
+      return `$${text}$`;
+    }
+
+    return text;
   }
 
   function formatMathContent(text) {
@@ -753,7 +846,9 @@
             <span class="badge ${getBadgeClass(card.subject)}">${card.subject}</span>
             <span class="topic-tag">${card.topic}</span>
           </div>
-          <div class="question-box">${card.question}</div>
+          
+          <!-- Вопрос с авто-рендером формул -->
+          <div class="question-box">${formatMixedMathContent(card.question)}</div>
           
           <!-- ВВОД ОТВЕТА В ПРАКТИКЕ С ПЕРЕКЛЮЧЕНИЕМ РЕЖИМОВ -->
           <div class="user-practice-input-section" id="practice-input-block">
@@ -773,12 +868,12 @@
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?_{#?}')">xₙ Индекс</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sqrt{#?}')">√ Корень</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\log_{#?}(#?)')">log</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cdot')">· Умножить</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sin(#?)')">sin</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cos(#?)')">cos</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\pi')">π</button>
                 <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\alpha')">α</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\Delta')">Δ</button>
               </div>
               <math-field id="practice-math-input" math-mode-space="\;"></math-field>
             </div>
@@ -885,8 +980,12 @@
     editingCardId = id;
     document.getElementById('input-subject').value = card.subject;
     document.getElementById('input-topic').value = card.topic;
+    
+    // Вопрос
+    setQuestionMode('text');
     document.getElementById('input-question').value = card.question;
     
+    // Ответ
     let ans = card.answer;
     const isPureFormula = isFormulaType(ans);
     
@@ -913,6 +1012,7 @@
     document.getElementById('add-form').reset();
     document.getElementById('editor-math-field').setValue('');
     document.getElementById('editor-text-field').value = '';
+    document.getElementById('q-math-field').setValue('');
     const saveBtn = document.getElementById('save-btn');
     saveBtn.textContent = '+ Сохранить в облако Supabase';
     document.getElementById('cancel-edit-btn').style.display = 'none';
@@ -923,8 +1023,14 @@
     const btn = document.getElementById('save-btn');
     const subject = document.getElementById('input-subject').value;
     const topic = document.getElementById('input-topic').value.trim();
-    const question = document.getElementById('input-question').value.trim();
     
+    let question = '';
+    if (currentQuestionMode === 'math') {
+      question = document.getElementById('q-math-field').getValue().trim();
+    } else {
+      question = document.getElementById('input-question').value.trim();
+    }
+
     let answer = '';
     if (currentEditorMode === 'math') {
       answer = document.getElementById('editor-math-field').getValue().trim();
@@ -968,6 +1074,7 @@
           deck.unshift(data[0]);
         }
         document.getElementById('input-question').value = '';
+        document.getElementById('q-math-field').setValue('');
         document.getElementById('editor-math-field').setValue('');
         document.getElementById('editor-text-field').value = '';
         document.getElementById('input-topic').focus();
@@ -1023,7 +1130,7 @@
             <span class="badge ${getBadgeClass(item.subject)}">${item.subject}</span>
             <span class="topic-tag">${item.topic}</span>
           </div>
-          <div class="item-question">${item.question}</div>
+          <div class="item-question">${formatMixedMathContent(item.question)}</div>
           <div class="item-answer">${formatMathContent(item.answer)}</div>
         </div>
         <div class="item-actions">
