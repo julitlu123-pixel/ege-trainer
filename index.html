@@ -30,6 +30,7 @@
       --badge-math: #ec4899;
       --badge-rus: #f59e0b;
       --status-cloud: #10b981;
+      --btn-secondary: #334155;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -80,6 +81,7 @@
     button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; width: 100%; padding: 12px; }
     button.btn-primary:hover { background: var(--accent-hover); }
+    button.btn-secondary { background: var(--btn-secondary); }
 
     .view { display: none; }
     .view.active { display: block; }
@@ -161,7 +163,7 @@
       font-size: 1.15rem;
       word-break: break-word;
     }
-    .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; }
+    .flashcard-actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
 
     /* Формы */
     .form-group { margin-bottom: 16px; }
@@ -221,7 +223,12 @@
       align-items: flex-start;
       gap: 12px;
     }
-    .delete-btn { background: transparent; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; }
+    .item-actions { display: flex; gap: 8px; align-items: center; }
+    .edit-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+    .edit-btn:hover { border-color: var(--accent); color: var(--text); }
+    .delete-btn { background: transparent; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+    
+    .form-buttons { display: flex; gap: 8px; margin-top: 8px; }
     .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; }
   </style>
 </head>
@@ -262,7 +269,7 @@
 
   <!-- ВКЛАДКА РЕДАКТОРА -->
   <section id="view-editor" class="view">
-    <form id="add-form" onsubmit="addCard(event)">
+    <form id="add-form" onsubmit="saveCardForm(event)">
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
           <label>Предмет</label>
@@ -299,7 +306,10 @@
         <math-field id="math-editor"></math-field>
       </div>
 
-      <button type="submit" id="save-btn" class="btn-primary" style="margin-top: 8px;">+ Сохранить в облако Supabase</button>
+      <div class="form-buttons">
+        <button type="submit" id="save-btn" class="btn-primary">+ Сохранить в облако Supabase</button>
+        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display:none" onclick="cancelEditing()">Отмена</button>
+      </div>
     </form>
 
     <div class="card-list" id="card-list"></div>
@@ -317,6 +327,7 @@
   let selectedTopics = new Set();
   let filteredDeck = [];
   let currentIndex = 0;
+  let editingCardId = null;
 
   async function fetchDeck() {
     try {
@@ -476,6 +487,7 @@
         </div>
         <div class="flashcard-actions">
           <button id="show-btn" style="flex:1" onclick="toggleAnswer()">Показать ответ</button>
+          <button id="skip-btn" class="btn-secondary" style="flex:1" onclick="skipOrOralAnswer()">Ответить устно / Пропустить</button>
           <button style="flex:1; display:none" id="next-btn" class="btn-primary" onclick="nextCard()">Следующий вопрос →</button>
         </div>
       </div>
@@ -490,8 +502,14 @@
   function toggleAnswer() {
     document.getElementById('answer-content').style.display = 'block';
     document.getElementById('show-btn').style.display = 'none';
+    document.getElementById('skip-btn').style.display = 'none';
     document.getElementById('next-btn').style.display = 'block';
     renderMath();
+  }
+
+  function skipOrOralAnswer() {
+    // Раскрываем ответ для мгновенной самопроверки и активируем кнопку перехода к следующему
+    toggleAnswer();
   }
 
   function nextCard() {
@@ -508,7 +526,33 @@
     renderPracticeCard();
   }
 
-  async function addCard(e) {
+  function startEditing(id) {
+    const card = deck.find(c => c.id === id);
+    if (!card) return;
+
+    editingCardId = id;
+    document.getElementById('input-subject').value = card.subject;
+    document.getElementById('input-topic').value = card.topic;
+    document.getElementById('input-question').value = card.question;
+    document.getElementById('math-editor').setValue(card.answer);
+
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.textContent = '💾 Обновить карточку';
+    document.getElementById('cancel-edit-btn').style.display = 'inline-block';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEditing() {
+    editingCardId = null;
+    document.getElementById('add-form').reset();
+    document.getElementById('math-editor').setValue('');
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.textContent = '+ Сохранить в облако Supabase';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+  }
+
+  async function saveCardForm(e) {
     e.preventDefault();
     const btn = document.getElementById('save-btn');
     const subject = document.getElementById('input-subject').value;
@@ -520,35 +564,59 @@
     if (!subject || !topic || !question || !answer) return;
 
     btn.disabled = true;
-    btn.textContent = 'Сохранение в облако...';
 
     try {
-      const { data, error } = await supabaseClient
-        .from('cards')
-        .insert([{ subject, topic, question, answer }])
-        .select();
+      if (editingCardId) {
+        // Режим обновления
+        btn.textContent = 'Обновление в облаке...';
+        const { data, error } = await supabaseClient
+          .from('cards')
+          .update({ subject, topic, question, answer })
+          .eq('id', editingCardId)
+          .select();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (data && data[0]) {
-        deck.unshift(data[0]);
-        updateDeckCount();
-        updateTopicsFilterUI();
-        renderEditorList();
+        const idx = deck.findIndex(c => c.id === editingCardId);
+        if (idx !== -1 && data && data[0]) {
+          deck[idx] = data[0];
+        }
+        cancelEditing();
+      } else {
+        // Режим создания новой карточки
+        btn.textContent = 'Сохранение в облако...';
+        const { data, error } = await supabaseClient
+          .from('cards')
+          .insert([{ subject, topic, question, answer }])
+          .select();
+
+        if (error) throw error;
+
+        if (data && data[0]) {
+          deck.unshift(data[0]);
+        }
+        document.getElementById('input-question').value = '';
+        mathField.setValue('');
+        document.getElementById('input-topic').focus();
       }
 
-      document.getElementById('input-question').value = '';
-      mathField.setValue('');
-      document.getElementById('input-topic').focus();
+      updateDeckCount();
+      updateTopicsFilterUI();
+      filterDeck();
+      renderEditorList();
     } catch (err) {
       alert('Ошибка при сохранении: ' + err.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = '+ Сохранить в облако Supabase';
+      if (!editingCardId) {
+        btn.textContent = '+ Сохранить в облако Supabase';
+      }
     }
   }
 
   async function deleteCard(id) {
+    if (!confirm('Удалить эту карточку?')) return;
+
     try {
       const { error } = await supabaseClient
         .from('cards')
@@ -556,6 +624,8 @@
         .eq('id', id);
 
       if (error) throw error;
+
+      if (editingCardId === id) cancelEditing();
 
       deck = deck.filter(item => item.id !== id);
       updateDeckCount();
@@ -583,7 +653,10 @@
           <h4 style="margin-bottom:8px;">${item.question}</h4>
           <div>$$ ${item.answer} $$</div>
         </div>
-        <button class="delete-btn" onclick="deleteCard(${item.id})" title="Удалить">✕</button>
+        <div class="item-actions">
+          <button class="edit-btn" onclick="startEditing(${item.id})" title="Редактировать">✎ Редактировать</button>
+          <button class="delete-btn" onclick="deleteCard(${item.id})" title="Удалить">✕</button>
+        </div>
       `;
       list.appendChild(el);
     });
