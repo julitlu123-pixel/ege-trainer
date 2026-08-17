@@ -509,7 +509,7 @@
 
       <div class="filter-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <span>Разделы предмета:</span>
-        <button type="button" class="toggle-all-btn" id="toggle-all-topics-btn" onclick="toggleAllTopicsClick()">Выбрать все</button>
+        <button type="button" class="toggle-all-btn" id="toggle-all-topics-btn" onclick="toggleAllTopicsClick()">Снять всё</button>
       </div>
       
       <!-- СПИСОК ТЕМ -->
@@ -853,7 +853,6 @@
       ? deck 
       : deck.filter(c => c.subject === currentSubject);
 
-    // Подсчёт количества карточек в каждой теме
     const topicCounts = {};
     availableCards.forEach(c => {
       if (c.topic) {
@@ -863,14 +862,12 @@
 
     const uniqueTopics = Object.keys(topicCounts);
 
-    if (resetSelection || selectedTopics.size === 0) {
+    if (resetSelection) {
       selectedTopics = new Set(uniqueTopics);
     } else {
       selectedTopics = new Set(uniqueTopics.filter(t => selectedTopics.has(t)));
-      if (selectedTopics.size === 0) selectedTopics = new Set(uniqueTopics);
     }
 
-    // Обновляем текст кнопки
     updateToggleBtnText(uniqueTopics);
 
     container.innerHTML = '';
@@ -918,7 +915,6 @@
     filterDeck();
   }
 
-  // 1 нажатие — выбрать всё, 2 нажатие — снять всё
   function toggleAllTopicsClick() {
     const availableCards = currentSubject === 'all' 
       ? deck 
@@ -926,14 +922,12 @@
     const uniqueTopics = [...new Set(availableCards.map(c => c.topic))];
 
     if (selectedTopics.size === uniqueTopics.length) {
-      // Если выбраны все — снимаем все
       selectedTopics.clear();
     } else {
-      // Иначе — выбираем все
       selectedTopics = new Set(uniqueTopics);
     }
 
-    updateTopicsFilterUI();
+    updateTopicsFilterUI(false);
     filterDeck();
   }
 
@@ -1022,7 +1016,7 @@
       container.innerHTML = `
         <div class="empty-state">
           <h3>Нет карточек по выбранным разделам</h3>
-          <p style="margin-top:8px">Выберите разделы в списке выше или добавьте новые в базе вопросов.</p>
+          <p style="margin-top:8px">Выберите хотя бы один раздел в списке выше.</p>
         </div>`;
       return;
     }
@@ -1288,7 +1282,7 @@
       }
 
       updateDeckCount();
-      updateTopicsFilterUI();
+      updateTopicsFilterUI(false);
       filterDeck();
       renderEditorList();
     } catch (err) {
@@ -1316,7 +1310,7 @@
 
       deck = deck.filter(item => item.id !== id);
       updateDeckCount();
-      updateTopicsFilterUI();
+      updateTopicsFilterUI(false);
       filterDeck();
       renderEditorList();
     } catch (err) {
