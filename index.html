@@ -28,6 +28,8 @@
       --border: #334155;
       --danger: #ef4444;
       --danger-bg: rgba(239, 68, 68, 0.15);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
       --badge-physics: #38bdf8;
       --badge-math: #ec4899;
       --badge-rus: #f59e0b;
@@ -82,7 +84,7 @@
     }
     button:hover { border-color: var(--accent); }
     button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; width: 100%; padding: 12px; font-weight: 600; font-size: 1rem; }
+    button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 12px; font-weight: 600; font-size: 1rem; }
     button.btn-primary:hover { background: var(--accent-hover); }
     button.btn-secondary { background: var(--btn-secondary); }
     button.btn-secondary:hover { background: #475569; }
@@ -141,10 +143,6 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 24px;
-      min-height: 260px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
       margin-bottom: 16px;
       overflow: hidden;
     }
@@ -172,7 +170,20 @@
       word-break: break-word;
       overflow-wrap: break-word;
     }
-    
+
+    /* Блок ввода ответа в практике */
+    .user-practice-input-section {
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .practice-input-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+      display: block;
+    }
+
     .answer-box {
       margin-top: 16px;
       padding: 16px;
@@ -188,6 +199,25 @@
       max-width: 100%;
     }
     
+    .result-feedback {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 14px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .result-feedback.correct {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+    .result-feedback.info {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid var(--accent);
+    }
+
     .katex-display {
       margin: 0.5em 0 !important;
       text-align: left !important;
@@ -219,7 +249,7 @@
     }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    /* Переключатель режима ввода ответа */
+    /* Переключатель режима ввода */
     .input-mode-switcher {
       display: flex;
       gap: 6px;
@@ -404,15 +434,13 @@
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <label style="margin-bottom:0;">Правильный ответ:</label>
-          
-          <!-- Переключатель режима ответа -->
           <div class="input-mode-switcher">
             <button type="button" class="mode-btn active" id="btn-mode-math" onclick="setAnswerMode('math')">📐 Формула (Word-стиль)</button>
             <button type="button" class="mode-btn" id="btn-mode-text" onclick="setAnswerMode('text')">📝 Текст / Определение</button>
           </div>
         </div>
 
-        <!-- 1. ВИЗУАЛЬНЫЙ РЕДАКТОР ФОРМУЛ (WORD-СТИЛЬ) -->
+        <!-- 1. РЕДАКТОР ФОРМУЛ -->
         <div id="math-input-wrapper">
           <div class="math-toolbar">
             <button type="button" class="math-btn" onclick="insertMathTemplate('#?^{#?}')">xⁿ Степень</button>
@@ -439,7 +467,7 @@
       </div>
 
       <div class="form-buttons">
-        <button type="submit" id="save-btn" class="btn-primary">+ Сохранить в облако Supabase</button>
+        <button type="submit" id="save-btn" class="btn-primary" style="flex:1;">+ Сохранить в облако Supabase</button>
         <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display:none" onclick="cancelEditing()">Отмена</button>
       </div>
     </form>
@@ -460,7 +488,7 @@
   let filteredDeck = [];
   let currentIndex = 0;
   let editingCardId = null;
-  let currentAnswerMode = 'math'; // 'math' или 'text'
+  let currentAnswerMode = 'math';
 
   function setAnswerMode(mode) {
     currentAnswerMode = mode;
@@ -494,6 +522,14 @@
     const mf = document.getElementById('math-editor');
     mf.executeCommand(['insert', template]);
     mf.focus();
+  }
+
+  function insertPracticeMathTemplate(template) {
+    const mf = document.getElementById('practice-math-input');
+    if (mf) {
+      mf.executeCommand(['insert', template]);
+      mf.focus();
+    }
   }
 
   async function fetchDeck() {
@@ -622,6 +658,13 @@
     return 'badge-Русский';
   }
 
+  function isFormulaType(text) {
+    if (!text) return false;
+    if (text.startsWith('\\text{') && text.endsWith('}')) return false;
+    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
+    return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^');
+  }
+
   function formatMathContent(text) {
     if (!text) return '';
     if (text.startsWith('\\text{') && text.endsWith('}')) {
@@ -647,6 +690,7 @@
 
     if (currentIndex >= filteredDeck.length) currentIndex = 0;
     const card = filteredDeck[currentIndex];
+    const isFormula = isFormulaType(card.answer);
 
     container.innerHTML = `
       <div class="flashcard">
@@ -656,10 +700,41 @@
             <span class="topic-tag">${card.topic}</span>
           </div>
           <div class="question-box">${card.question}</div>
-          <div class="answer-box" id="answer-content">${formatMathContent(card.answer)}</div>
+          
+          <!-- ВВОД ОТВЕТА ПОЛЬЗОВАТЕЛЕМ -->
+          <div class="user-practice-input-section" id="practice-input-block">
+            <span class="practice-input-label">Ваш ответ:</span>
+            
+            ${isFormula ? `
+              <div class="math-toolbar">
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?^{#?}')">xⁿ Степень</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?_{#?}')">xₙ Индекс</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sqrt{#?}')">√ Корень</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cdot')">· Умножить</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sin(#?)')">sin</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cos(#?)')">cos</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\pi')">π</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\alpha')">α</button>
+                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\Delta')">Δ</button>
+              </div>
+              <math-field id="practice-math-input" math-mode-space="\;"></math-field>
+            ` : `
+              <textarea id="practice-text-input" rows="2" placeholder="Напишите ответ своими словами..."></textarea>
+            `}
+          </div>
+
+          <div id="practice-feedback" class="result-feedback"></div>
+
+          <!-- ЭТАЛОННЫЙ ОТВЕТ -->
+          <div class="answer-box" id="answer-content">
+            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Правильный ответ:</div>
+            ${formatMathContent(card.answer)}
+          </div>
         </div>
+
         <div class="flashcard-actions">
-          <button id="show-btn" style="flex:1" onclick="toggleAnswer()">Показать ответ</button>
+          <button id="check-btn" class="btn-primary" style="flex:1" onclick="checkAnswer()">Проверить ответ</button>
           <button id="skip-btn" class="btn-secondary" style="flex:1" onclick="skipOrOralAnswer()">Ответить устно / Пропустить</button>
           <button style="flex:1; display:none" id="next-btn" class="btn-primary" onclick="nextCard()">Следующий вопрос →</button>
         </div>
@@ -672,16 +747,57 @@
     renderMath();
   }
 
-  function toggleAnswer() {
+  function cleanMathString(str) {
+    return (str || '')
+      .replace(/\s+/g, '')
+      .replace(/\\left/g, '')
+      .replace(/\\right/g, '')
+      .replace(/\\cdot/g, '')
+      .replace(/\*/g, '')
+      .replace(/[{}]/g, '')
+      .toLowerCase();
+  }
+
+  function checkAnswer() {
+    const card = filteredDeck[currentIndex];
+    const isFormula = isFormulaType(card.answer);
+    let userAnswer = '';
+
+    if (isFormula) {
+      const mf = document.getElementById('practice-math-input');
+      userAnswer = mf ? mf.getValue() : '';
+    } else {
+      const tf = document.getElementById('practice-text-input');
+      userAnswer = tf ? tf.value : '';
+    }
+
+    const feedback = document.getElementById('practice-feedback');
+    feedback.style.display = 'block';
+
+    const cleanUser = cleanMathString(userAnswer);
+    const cleanTarget = cleanMathString(card.answer);
+
+    if (cleanUser.length > 0 && cleanUser === cleanTarget) {
+      feedback.className = 'result-feedback correct';
+      feedback.textContent = '🎉 Отлично! Ответ абсолютно верный!';
+    } else {
+      feedback.className = 'result-feedback info';
+      feedback.textContent = '📖 Сверьте ваш ответ с эталоном ниже:';
+    }
+
+    showAnswerView();
+  }
+
+  function showAnswerView() {
     document.getElementById('answer-content').style.display = 'block';
-    document.getElementById('show-btn').style.display = 'none';
+    document.getElementById('check-btn').style.display = 'none';
     document.getElementById('skip-btn').style.display = 'none';
     document.getElementById('next-btn').style.display = 'block';
     renderMath();
   }
 
   function skipOrOralAnswer() {
-    toggleAnswer();
+    showAnswerView();
   }
 
   function nextCard() {
@@ -708,7 +824,7 @@
     document.getElementById('input-question').value = card.question;
     
     let ans = card.answer;
-    const isPureFormula = !/[а-яА-ЯёЁ]/.test(ans) || ans.includes('\\frac') || ans.includes('\\sqrt') || ans.includes('^');
+    const isPureFormula = isFormulaType(ans);
     
     if (isPureFormula) {
       setAnswerMode('math');
