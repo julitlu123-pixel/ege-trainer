@@ -118,6 +118,9 @@
     .weekdays-selector label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem; }
     .weekdays-selector input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
+    .custom-shift-inputs { display: none; gap: 10px; align-items: center; margin-top: 14px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border); }
+    .custom-shift-inputs input[type="number"] { width: 80px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; }
+
     .task-cover-selector { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; padding: 8px 12px; background: rgba(0,0,0,0.15); border-radius: 8px; border: 1px dashed var(--border); }
     .task-cover-selector span { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
     .task-color-picker { width: 32px; height: 32px; padding: 0; border: none; border-radius: 6px; cursor: pointer; background: transparent; overflow: hidden; }
@@ -197,10 +200,7 @@
     .badge-Математика { color: var(--badge-math); border: 1px solid var(--badge-math); }
     .badge-Русский { color: var(--badge-rus); border: 1px solid var(--badge-rus); }
 
-    /* ОТОБРАЖЕНИЕ ВОПРОСА */
     .question-box { font-size: 1.15rem; font-weight: 600; margin: 18px 0; line-height: 1.6; overflow-x: auto; text-align: left; }
-    
-    /* ОТОБРАЖЕНИЕ ОТВЕТА */
     .answer-box { margin-top: 18px; padding: 20px 24px; background: rgba(0,0,0,0.45); border-radius: 8px; border-left: 4px solid var(--accent); display: none; font-size: 1.18rem; overflow-x: auto; }
     
     .flashcard-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
@@ -314,15 +314,19 @@
       <div class="task-inputs-row">
         <input type="text" id="task-title" placeholder="Напиши задачу (например: Смена 2/2, Решить тест...)">
         <input type="date" id="task-date">
-        <select id="task-repeat" onchange="toggleWeekdays(this.value)">
+        <select id="task-repeat" onchange="handleRepeatChange(this.value)">
           <option value="none">Без повторения</option>
           <option value="2/2">График 2/2</option>
+          <option value="3/3">График 3/3</option>
+          <option value="4/4">График 4/4</option>
+          <option value="custom_shift">Свой график смен (X/Y)</option>
           <option value="weekly">По дням недели</option>
         </select>
         <button class="btn-primary" id="task-submit-btn" style="padding: 10px 20px;" onclick="saveTaskForm()">Добавить</button>
         <button class="btn-secondary" id="task-cancel-btn" style="padding: 10px 20px; display:none;" onclick="cancelEditingTask()">Отмена</button>
       </div>
       
+      <!-- Чекбоксы дней недели -->
       <div class="weekdays-selector" id="weekdays-selector">
         <label><input type="checkbox" value="1" class="weekday-chk"> Пн</label>
         <label><input type="checkbox" value="2" class="weekday-chk"> Вт</label>
@@ -331,6 +335,14 @@
         <label><input type="checkbox" value="5" class="weekday-chk"> Пт</label>
         <label><input type="checkbox" value="6" class="weekday-chk"> Сб</label>
         <label><input type="checkbox" value="0" class="weekday-chk"> Вс</label>
+      </div>
+
+      <!-- Ввод произвольного графика смен -->
+      <div class="custom-shift-inputs" id="custom-shift-inputs">
+        <span style="font-size:0.9rem;">Рабочих дней:</span>
+        <input type="number" id="shift-work-days" min="1" max="30" value="2">
+        <span style="font-size:0.9rem;">Выходных дней:</span>
+        <input type="number" id="shift-rest-days" min="1" max="30" value="2">
       </div>
 
       <div class="task-cover-selector">
@@ -756,7 +768,10 @@
   let editingTaskId = null;
   let currentTaskCover = null;
 
-  function toggleWeekdays(val) { document.getElementById('weekdays-selector').style.display = val === 'weekly' ? 'flex' : 'none'; }
+  function handleRepeatChange(val) {
+    document.getElementById('weekdays-selector').style.display = (val === 'weekly') ? 'flex' : 'none';
+    document.getElementById('custom-shift-inputs').style.display = (val === 'custom_shift') ? 'flex' : 'none';
+  }
 
   function setTaskCoverColor(color) {
     currentTaskCover = color;
@@ -804,10 +819,21 @@
     document.getElementById('task-date').value = task.task_date;
     
     const repeatSelect = document.getElementById('task-repeat');
-    if (task.repeat_type) repeatSelect.value = task.repeat_type;
-    else if (task.is_shift) repeatSelect.value = '2/2';
-    else repeatSelect.value = 'none';
-    toggleWeekdays(repeatSelect.value);
+    if (task.repeat_type) {
+      if (task.repeat_type.startsWith('shift_')) {
+        repeatSelect.value = 'custom_shift';
+        const p = task.repeat_type.replace('shift_', '').split('_');
+        document.getElementById('shift-work-days').value = p[0] || 2;
+        document.getElementById('shift-rest-days').value = p[1] || 2;
+      } else {
+        repeatSelect.value = task.repeat_type;
+      }
+    } else if (task.is_shift) {
+      repeatSelect.value = '2/2';
+    } else {
+      repeatSelect.value = 'none';
+    }
+    handleRepeatChange(repeatSelect.value);
 
     if (repeatSelect.value === 'weekly' && task.repeat_days) {
         const days = task.repeat_days.split(',');
@@ -832,7 +858,7 @@
     document.getElementById('task-title').value = '';
     document.getElementById('task-date').valueAsDate = new Date();
     document.getElementById('task-repeat').value = 'none';
-    toggleWeekdays('none');
+    handleRepeatChange('none');
     document.querySelectorAll('.weekday-chk').forEach(chk => chk.checked = false);
     clearTaskCover();
     
@@ -843,8 +869,14 @@
   async function saveTaskForm() {
     const titleStr = document.getElementById('task-title').value.trim();
     const dateStr = document.getElementById('task-date').value;
-    const repeatType = document.getElementById('task-repeat').value;
+    let repeatType = document.getElementById('task-repeat').value;
     
+    if (repeatType === 'custom_shift') {
+      const w = parseInt(document.getElementById('shift-work-days').value) || 2;
+      const r = parseInt(document.getElementById('shift-rest-days').value) || 2;
+      repeatType = `shift_${w}_${r}`;
+    }
+
     let repeatDays = '';
     if (repeatType === 'weekly') {
       const checked = document.querySelectorAll('.weekday-chk:checked');
@@ -854,9 +886,11 @@
 
     if (!titleStr || !dateStr) return alert('Введи название и дату!');
 
+    const isShiftFlag = repeatType === '2/2' || repeatType === '3/3' || repeatType === '4/4' || repeatType.startsWith('shift_');
+
     const taskPayload = { 
         title: titleStr, task_date: dateStr, repeat_type: repeatType,
-        repeat_days: repeatDays, is_shift: repeatType === '2/2', cover: currentTaskCover 
+        repeat_days: repeatDays, is_shift: isShiftFlag, cover: currentTaskCover 
     };
 
     try {
@@ -913,7 +947,13 @@
       const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 
       let badge = '';
-      if (task.repeat_type === '2/2' || task.is_shift) badge = `<span class="task-badge-shift">🔁 2/2</span>`;
+      if (task.repeat_type === '2/2' || (task.is_shift && !task.repeat_type)) badge = `<span class="task-badge-shift">🔁 2/2</span>`;
+      else if (task.repeat_type === '3/3') badge = `<span class="task-badge-shift">🔁 3/3</span>`;
+      else if (task.repeat_type === '4/4') badge = `<span class="task-badge-shift">🔁 4/4</span>`;
+      else if (task.repeat_type && task.repeat_type.startsWith('shift_')) {
+        const p = task.repeat_type.replace('shift_', '').split('_');
+        badge = `<span class="task-badge-shift">🔁 ${p[0]}/${p[1]}</span>`;
+      }
       else if (task.repeat_type === 'weekly') badge = `<span class="task-badge-shift">🔁 По дням</span>`;
 
       let coverHtml = '';
@@ -990,7 +1030,18 @@
       tasks.forEach(task => {
         let showTask = false;
         
-        if (task.repeat_type === '2/2' || task.is_shift) {
+        const isShiftType = task.repeat_type === '2/2' || task.repeat_type === '3/3' || task.repeat_type === '4/4' || (task.repeat_type && task.repeat_type.startsWith('shift_')) || (task.is_shift && !task.repeat_type);
+
+        if (isShiftType) {
+          let workDays = 2, restDays = 2;
+          if (task.repeat_type === '3/3') { workDays = 3; restDays = 3; }
+          else if (task.repeat_type === '4/4') { workDays = 4; restDays = 4; }
+          else if (task.repeat_type && task.repeat_type.startsWith('shift_')) {
+            const p = task.repeat_type.replace('shift_', '').split('_');
+            workDays = parseInt(p[0]) || 2;
+            restDays = parseInt(p[1]) || 2;
+          }
+
           const parts = task.task_date.split('-');
           const taskYear = parseInt(parts[0], 10);
           const taskMonth = parseInt(parts[1], 10) - 1;
@@ -1000,7 +1051,10 @@
           const utcCell = Date.UTC(year, month, day);
           const diffDays = Math.floor((utcCell - utcTask) / (1000 * 60 * 60 * 24));
           
-          if (diffDays >= 0 && (diffDays % 4 === 0 || diffDays % 4 === 1)) showTask = true;
+          const cycle = workDays + restDays;
+          if (diffDays >= 0 && (diffDays % cycle) < workDays) {
+            showTask = true;
+          }
         } else if (task.repeat_type === 'weekly') {
           if (cellDateStr >= task.task_date && task.repeat_days.includes(cellDayOfWeek)) showTask = true;
         } else {
@@ -1009,7 +1063,7 @@
 
         if (showTask) {
           const isDone = task.status === 'done' ? 'done' : '';
-          const isShift = (task.repeat_type !== 'none' || task.is_shift) ? 'shift' : '';
+          const isShift = isShiftType ? 'shift' : '';
           let styleStr = '';
           if (task.cover && task.cover.startsWith('#')) styleStr = `style="border-left-color: ${task.cover};"`;
           cellHtml += `<div class="cal-task ${isDone} ${isShift}" ${styleStr} title="${task.title}">${task.title}</div>`;
@@ -1026,7 +1080,6 @@
   let pracSubject = 'all'; let pracTopics = new Set();
   let edSubject = 'all';   let edTopics = new Set();
 
-  // УМНЫЙ ПАРСЕР ДЛЯ ВОПРОСОВ (текст + LaTeX)
   function renderQuestion(elementId, rawContent) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -1038,7 +1091,6 @@
         text = text.replace(/\n/g, '<br>');
         text = text.replace(/(?<!\$)(\d+\^\\circ)(?!\$)/g, '$$$1$$');
         
-        // Автоматическая обертка математических переменных (d_1, d_2, a, b, 10^-6 и т.д.)
         text = text.replace(/(?<![а-яА-ЯёЁa-zA-Z\$\\])([a-zA-Z](?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9\-]+|\^{[^\}]+}|_[0-9]+)?)(?![а-яА-ЯёЁa-zA-Z\$\\])/g, (match) => {
             if (['a','b','c','d','n','r','R','h','p','S','k','V','m','T','F','q','t'].includes(match.split('_')[0].split('^')[0])) {
                 return `$${match}$`;
@@ -1046,7 +1098,6 @@
             return match;
         });
         
-        // Обертка степеней 10^{...} или 10^...
         text = text.replace(/(?<!\$)(10\^\{?[^\s\$,\.\)]+\}?)(?!\$)/g, '$$$1$$');
     }
 
@@ -1064,7 +1115,6 @@
     }
   }
 
-  // БРОНЕБОЙНЫЙ ПАРСЕР ДЛЯ ОТВЕТОВ (Всегда чистый LaTeX по центру)
   function forceAnswerLatex(rawText) {
     let t = rawText.trim();
     if (t.startsWith('$$') && t.endsWith('$$')) t = t.slice(2, -2).trim();
