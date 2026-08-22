@@ -1361,15 +1361,12 @@
   }
 
   async function cleanCalendarDatabase() {
-    if (!confirm('Очистить базу от старого мусора и дубликатов? В работе останутся только актуальные задачи, выполненные и ожидающие в инкубаторе.')) return;
+    if (!confirm('Очистить базу от старого мусора и дубликатов? В работе останутся только актуальные задачи (в планах, выполненные и в инкубаторе).')) return;
     try {
-      // Оставляем в памяти строго нужные задачи
       const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
       
-      // Перезаписываем базу данных актуальным списком
       await supabaseClient.from('tasks').delete().neq('id', 0);
       if (validTasks.length > 0) {
-        // Убираем временные id для вставки (или апсертим)
         const cleanPayload = validTasks.map(t => ({
           title: t.title,
           task_date: t.task_date,
