@@ -84,7 +84,7 @@
     button.btn-secondary:hover { background: #475569; }
 
     /* =========================================
-       НАСТРОЙКИ (Фон и Шимеджик)
+       НАСТРОЙКИ
        ========================================= */
     .settings-panel {
       background: var(--card-bg); border: 1px solid var(--border);
@@ -197,10 +197,10 @@
     .badge-Математика { color: var(--badge-math); border: 1px solid var(--badge-math); }
     .badge-Русский { color: var(--badge-rus); border: 1px solid var(--badge-rus); }
 
-    /* ОТОБРАЖЕНИЕ ВОПРОСА (Слева) */
+    /* ОТОБРАЖЕНИЕ ВОПРОСА */
     .question-box { font-size: 1.15rem; font-weight: 600; margin: 18px 0; line-height: 1.6; overflow-x: auto; text-align: left; }
     
-    /* ОТОБРАЖЕНИЕ ОТВЕТА (По центру, всегда LaTeX) */
+    /* ОТОБРАЖЕНИЕ ОТВЕТА */
     .answer-box { margin-top: 18px; padding: 20px 24px; background: rgba(0,0,0,0.45); border-radius: 8px; border-left: 4px solid var(--accent); display: none; font-size: 1.18rem; overflow-x: auto; }
     
     .flashcard-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
@@ -260,7 +260,7 @@
   </header>
 
   <!-- =========================================
-       ВКЛАДКА 0: НАСТРОЙКИ (Фон и Шимеджик)
+       ВКЛАДКА 0: НАСТРОЙКИ
        ========================================= -->
   <section id="view-settings" class="view">
     <div class="settings-panel">
@@ -726,13 +726,9 @@
        const b64 = evt.target.result;
        const el = document.getElementById(`shim-${type}-preview`);
        el.style.backgroundImage = `url(${b64})`; el.textContent = '';
-       if (type === 'idle') {
-           localStorage.setItem('shimeji_idle', b64);
-           shIdleB64 = b64;
-       } else {
-           localStorage.setItem('shimeji_walk', b64);
-           shWalkB64 = b64;
-       }
+       if (type === 'idle') { localStorage.setItem('shimeji_idle', b64); shIdleB64 = b64; } 
+       else { localStorage.setItem('shimeji_walk', b64); shWalkB64 = b64; }
+       
        activeShimejis.forEach(sh => {
            if (sh.state === 'walk') setShimejiVisual(sh, 'walk');
            else setShimejiVisual(sh, 'idle');
@@ -914,7 +910,6 @@
 
       const parts = task.task_date.split('-');
       const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
-      // Добавлено отображение года по просьбе пользователя
       const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 
       let badge = '';
@@ -1028,8 +1023,10 @@
   // ==========================================
   // БАЗА КАРТОЧЕК: ОБЩАЯ ЛОГИКА И ПАРСИНГ
   // ==========================================
-  
-  // 1. Умный парсер для ВОПРОСОВ (текст слева + inline математика)
+  let pracSubject = 'all'; let pracTopics = new Set();
+  let edSubject = 'all';   let edTopics = new Set();
+
+  // УМНЫЙ ПАРСЕР ДЛЯ ВОПРОСОВ (текст + LaTeX)
   function renderQuestion(elementId, rawContent) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -1040,6 +1037,17 @@
     } else {
         text = text.replace(/\n/g, '<br>');
         text = text.replace(/(?<!\$)(\d+\^\\circ)(?!\$)/g, '$$$1$$');
+        
+        // Автоматическая обертка математических переменных (d_1, d_2, a, b, 10^-6 и т.д.)
+        text = text.replace(/(?<![а-яА-ЯёЁa-zA-Z\$\\])([a-zA-Z](?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9\-]+|\^{[^\}]+}|_[0-9]+)?)(?![а-яА-ЯёЁa-zA-Z\$\\])/g, (match) => {
+            if (['a','b','c','d','n','r','R','h','p','S','k','V','m','T','F','q','t'].includes(match.split('_')[0].split('^')[0])) {
+                return `$${match}$`;
+            }
+            return match;
+        });
+        
+        // Обертка степеней 10^{...} или 10^...
+        text = text.replace(/(?<!\$)(10\^\{?[^\s\$,\.\)]+\}?)(?!\$)/g, '$$$1$$');
     }
 
     el.innerHTML = text;
@@ -1056,7 +1064,7 @@
     }
   }
 
-  // 2. Бронебойный парсер для ОТВЕТОВ (Всегда чистый LaTeX по центру экрана)
+  // БРОНЕБОЙНЫЙ ПАРСЕР ДЛЯ ОТВЕТОВ (Всегда чистый LaTeX по центру)
   function forceAnswerLatex(rawText) {
     let t = rawText.trim();
     if (t.startsWith('$$') && t.endsWith('$$')) t = t.slice(2, -2).trim();
@@ -1117,7 +1125,7 @@
     const counts = {}; available.forEach(c => { counts[c.topic] = (counts[c.topic] || 0) + 1; });
     const unique = Object.keys(counts);
 
-    if (reset) pracTopics = new Set(unique);
+    if (reset || pracTopics.size === 0) pracTopics = new Set(unique);
     else pracTopics = new Set(unique.filter(t => pracTopics.has(t)));
 
     container.innerHTML = '';
@@ -1235,8 +1243,6 @@
   // ==========================================
   // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
-  let currentQuestionMode = 'text'; let currentEditorMode = 'math'; let currentUploadedImageBase64 = '';
-  
   function setEditorSubject(subj, el) { edSubject = subj; document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); updateEditorTopics(true); filterEditorDeck(); }
   function updateEditorTopics(reset = false) {
     const container = document.getElementById('editor-topics-list');
@@ -1244,7 +1250,7 @@
     const counts = {}; available.forEach(c => { counts[c.topic] = (counts[c.topic] || 0) + 1; });
     const unique = Object.keys(counts);
 
-    if (reset) edTopics = new Set(unique); else edTopics = new Set(unique.filter(t => edTopics.has(t)));
+    if (reset || edTopics.size === 0) edTopics = new Set(unique); else edTopics = new Set(unique.filter(t => edTopics.has(t)));
     container.innerHTML = '';
     if (unique.length === 0) return container.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem; padding:8px; text-align:center;">Нет доступных разделов</div>';
     unique.forEach(t => { const isChecked = edTopics.has(t) ? 'checked' : ''; container.innerHTML += `<div class="topic-list-item"><label><input type="checkbox" ${isChecked} onchange="toggleEditorTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label><span class="topic-item-count">${counts[t]}</span></div>`; });
