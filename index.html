@@ -281,7 +281,7 @@
     .item-question { font-size: 0.98rem; margin: 8px 0; text-align: left; }
     .item-answer { font-size: 1.05rem; background: rgba(0,0,0,0.35); padding: 12px; border-radius: 8px; overflow-x: auto; }
     .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .edit-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+    .edit-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.80rem; white-space: nowrap; }
     .edit-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(99, 102, 241, 0.1); }
     .delete-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--danger); font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; text-align: center; }
     .delete-btn:hover { background: var(--danger-bg); border-color: var(--danger); }
@@ -599,6 +599,7 @@
   let filteredPracticeDeck = []; 
   let filteredEditorDeck = [];
   let currentIndex = 0;
+  let editingCardId = null;
   
   // ==========================================
   // НАВИГАЦИЯ И ФОН
@@ -1347,7 +1348,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ & ОЧИСТКА ПО ПРАВИЛУ АКТУАЛЬНОСТИ
+  // КАЛЕНДАРЬ & ЧИСТКА ПО ВЫПОЛНЕНИЯМ
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
@@ -1362,28 +1363,41 @@
   }
 
   async function cleanCalendarDatabase() {
-    if (!confirm('Почистить календарь и базу? Все прошлые невыполненные задачи удалятся, а выполненные и активные останутся.')) return;
+    if (!confirm('Почистить календарь? Это удалит старые зачёркивания и пересчитает активный график.')) return;
     try {
       const today = new Date();
       const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
 
-      // Оставляем задачи:
-      // 1. Которые находятся в списке «Выполнено» (status === 'done')
-      // 2. У которых дата сегодня или в будущем (task_date >= todayStr)
-      // 3. Которые ждут в инкубаторе (is_incubating === true)
-      const validTasks = tasks.filter(t => t.status === 'done' || t.task_date >= todayStr || t.is_incubating);
+      // Оставляем только те задачи, которые сейчас есть в todo, done или инкубаторе
+      const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
       
-      const validIds = new Set(validTasks.map(t => t.id));
-      const { data: allTasks, error } = await supabaseClient.from('tasks').select('*');
-      if (error) throw error;
+      // Сбрасываем старую строку completed_dates у активных задач, если они сейчас стоят не в done
+      validTasks.forEach(t => {
+        if (t.status !== 'done') {
+          t.completed_dates = '';
+        }
+      });
 
-      const trashIds = allTasks.filter(t => !validIds.has(t.id)).map(t => t.id);
-
-      if (trashIds.length > 0) {
-        await supabaseClient.from('tasks').delete().in('id', trashIds);
+      await supabaseClient.from('tasks').delete().neq('id', 0);
+      if (validTasks.length > 0) {
+        const cleanPayload = validTasks.map(t => ({
+          title: t.title,
+          task_date: t.task_date,
+          time_appear: t.time_appear,
+          time_due: t.time_due,
+          repeat_type: t.repeat_type,
+          repeat_days: t.repeat_days,
+          is_shift: t.is_shift,
+          cover: t.cover,
+          status: t.status,
+          position: t.position,
+          is_incubating: t.is_incubating,
+          completed_dates: t.completed_dates
+        }));
+        await supabaseClient.from('tasks').insert(cleanPayload);
       }
 
-      alert('Календарь успешно почищен по критерию актуальности!');
+      alert('Календарь успешно очищен!');
       fetchTasks();
     } catch(err) {
       alert('Ошибка при очистке: ' + err.message);
@@ -1721,22 +1735,44 @@
   // ==========================================
   // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
-  function setEditorSubject(subj, el) { edSubject = subj; document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); updateEditorTopics(true); filterEditorDeck(); }
+  function setEditorSubject(subj, el) { 
+    edSubject = subj; 
+    document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); 
+    el.classList.add('active'); 
+    updateEditorTopics(true); 
+    filterEditorDeck(); 
+  }
+
   function updateEditorTopics(reset = false) {
     const container = document.getElementById('editor-topics-list');
     const available = edSubject === 'all' ? deck : deck.filter(c => c.subject === edSubject);
     const counts = {}; available.forEach(c => { counts[c.topic] = (counts[c.topic] || 0) + 1; });
     const unique = Object.keys(counts);
 
-    if (reset || edTopics.size === 0) edTopics = new Set(unique); else edTopics = new Set(unique.filter(t => edTopics.has(t)));
+    if (reset || edTopics.size === 0) {
+      edTopics = new Set(unique);
+    } else {
+      edTopics = new Set(unique.filter(t => edTopics.has(t)));
+    }
+
     container.innerHTML = '';
     if (unique.length === 0) return container.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem; padding:8px; text-align:center;">Нет доступных разделов</div>';
-    unique.forEach(t => { const isChecked = edTopics.has(t) ? 'checked' : ''; container.innerHTML += `<div class="topic-list-item"><label><input type="checkbox" ${isChecked} onchange="toggleEditorTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label><span class="topic-item-count">${counts[t]}</span></div>`; });
+    
+    unique.forEach(t => { 
+      const isChecked = edTopics.has(t) ? 'checked' : ''; 
+      container.innerHTML += `<div class="topic-list-item"><label><input type="checkbox" ${isChecked} onchange="toggleEditorTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label><span class="topic-item-count">${counts[t]}</span></div>`; 
+    });
   }
-  function toggleEditorTopic(topic, isChecked) { if (isChecked) edTopics.add(topic); else edTopics.delete(topic); filterEditorDeck(); }
+
+  function toggleEditorTopic(topic, isChecked) { 
+    if (isChecked) edTopics.add(topic); else edTopics.delete(topic); 
+    filterEditorDeck(); 
+  }
+
   function toggleAllEditorTopics(selectState) {
     const available = edSubject === 'all' ? deck : deck.filter(c => c.subject === edSubject);
     const unique = [...new Set(available.map(c => c.topic))];
+    
     if (selectState) {
       edTopics = new Set(unique);
     } else {
