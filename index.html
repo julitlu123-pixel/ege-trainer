@@ -68,7 +68,6 @@
     .brand-logo svg { width: 22px; height: 22px; }
     h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
     
-    /* Табы (Навигация) */
     .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
     @media(min-width: 768px) { .tabs { width: auto; } }
     .tabs button {
@@ -182,20 +181,6 @@
     .task-action-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-size: 0.9rem; width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .task-action-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
     .task-action-btn.del:hover { background: var(--danger); border-color: var(--danger); }
-
-    /* ИНКУБАТОР */
-    .incubator-panel {
-      margin-top: 24px; background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(10px);
-    }
-    .incubator-header {
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none; font-weight: 600; font-size: 0.95rem;
-    }
-    .incubator-body {
-      margin-top: 14px; display: none; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto;
-    }
-    .incubator-body.open { display: flex; }
 
     /* =========================================
        КАЛЕНДАРЬ
@@ -534,7 +519,7 @@
           <input type="text" id="input-image-url" placeholder="Или вставь прямую ссылку (https://...)" oninput="updateImagePreview(this.value)">
           <div id="image-preview-container" class="image-preview-wrapper" style="display:none;">
             <img id="preview-img-tag" src="" alt="Предпросмотр">
-            <button type="button" class="remove-img-btn" onclick="removeImage()">✕ Удалить</button>
+            <button type="button" class="remove-img-btn" onclick="removeImage()">✕ Удалить рисунок</button>
           </div>
         </div>
       </div>
@@ -575,7 +560,7 @@
 
 <script>
   // ==========================================
-  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И НАСТРОЙКИ
   // ==========================================
   const SUPABASE_URL = 'https://lhymatecnqucjdijmgww.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoeW1hdGVjbnF1Y2pkaWptZ3d3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzcyNTgsImV4cCI6MjEwMjU1MzI1OH0.IqlSb0aitLZ5mQUXlVaAfrDp0lwuaJlf2bIbVEb7Ffw';
@@ -840,7 +825,7 @@
 
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & ИНКУБАТОР (С ЗАЩИТОЙ ОТ ДУБЛИКАТОВ)
+  // ТРЕКЕР ЗАДАЧ & УМНАЯ СИСТЕМА ПОВТОРЕНИЙ
   // ==========================================
   let editingTaskId = null;
   let currentTaskCover = null;
@@ -1078,6 +1063,7 @@
     return fromDateStr;
   }
 
+  // Обновлённая логика выполнения: без бесконечных дубликатов с единой историей дат
   async function toggleTaskStatus(id, currentStatus) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -1092,7 +1078,7 @@
 
       const nextDate = getNextOccurrenceDate(task, task.task_date);
       
-      // Защита от дубликатов: проверяем, нет ли уже в инкубаторе задачи с таким же названием и датой
+      // Проверяем, нет ли уже этой задачи с такой же датой в инкубаторе
       const alreadyExists = tasks.some(t => t.title === task.title && t.task_date === nextDate && t.is_incubating);
 
       renderKanban();
@@ -1278,7 +1264,6 @@
       else coverHtml = `<div class="task-cover" style="background-image: url(${task.cover});"></div>`;
     }
 
-    // Если задача в инкубаторе, убираем чекбокс выполнения, чтобы она не зачёркивалась
     const checkboxHtml = isIncubating ? '' : `<input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${task.id}, '${task.status}')">`;
 
     return `
@@ -1317,7 +1302,7 @@
     tasks.forEach(task => {
       if (task.is_incubating) {
         cInc++;
-        incubatorList.innerHTML += renderTaskCardHTML(task, false, true); // true = в инкубаторе без чекбокса
+        incubatorList.innerHTML += renderTaskCardHTML(task, false, true);
       } else {
         const isDone = task.status === 'done';
         if (isDone) {
@@ -1336,7 +1321,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ
+  // КАЛЕНДАРЬ (С УЧЕТОМ ТОЛЬКО АКТУАЛЬНЫХ ДАТ)
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
@@ -1378,6 +1363,9 @@
       let cellHtml = `<div class="cal-cell ${isToday}"><div class="cal-date">${day}</div>`;
 
       tasks.forEach(task => {
+        // Пропускаем задачи, которые сейчас нагло сидят в инкубаторе (ожидают возрождения в будущем)
+        if (task.is_incubating && task.task_date === cellDateStr) return;
+
         let showTask = false;
         let isCompletedOnThisDay = false;
         
