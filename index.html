@@ -10,7 +10,6 @@
   <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-  <!-- Добавлено расширение авто-рендера для смешанного текста -->
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
   <!-- MathLive -->
@@ -160,13 +159,23 @@
     
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
     .day-name { text-align: center; font-weight: 600; color: var(--text-muted); padding: 10px 0; font-size: 0.9rem; background: var(--card-bg); border-radius: 8px; backdrop-filter: blur(5px); }
-    .cal-cell { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; min-height: 110px; padding: 8px; display: flex; flex-direction: column; gap: 4px; backdrop-filter: blur(5px); }
+    
+    .cal-cell { 
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; 
+        min-height: 110px; padding: 8px; display: flex; flex-direction: column; gap: 4px; 
+        backdrop-filter: blur(5px);
+        overflow-y: auto; overflow-x: hidden;
+    }
+    .cal-cell::-webkit-scrollbar { width: 4px; }
+    .cal-cell::-webkit-scrollbar-track { background: transparent; }
+    .cal-cell::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
     .cal-cell.empty { background: transparent; border: none; backdrop-filter: none; }
     .cal-cell.today { border-color: var(--accent); background: rgba(99, 102, 241, 0.1); }
     .cal-date { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; color: var(--text-muted); }
     .cal-cell.today .cal-date { color: #fff; }
     
-    .cal-task { font-size: 0.75rem; padding: 4px 6px; border-radius: 4px; background: rgba(0,0,0,0.4); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--border); }
+    .cal-task { font-size: 0.75rem; padding: 4px 6px; border-radius: 4px; background: rgba(0,0,0,0.4); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--border); flex-shrink: 0; }
     .cal-task.done { border-left-color: var(--success); text-decoration: line-through; opacity: 0.6; }
     .cal-task.shift { border-left-color: var(--accent); background: rgba(99, 102, 241, 0.2); }
 
@@ -254,7 +263,6 @@
        ВКЛАДКА 0: НАСТРОЙКИ (Фон и Шимеджик)
        ========================================= -->
   <section id="view-settings" class="view">
-    
     <div class="settings-panel">
       <h2>🖼️ Оформление сайта</h2>
       <div class="form-group">
@@ -559,7 +567,7 @@
     let shim = {
       el: el,
       x: window.innerWidth / 2 + (Math.random() * 200 - 100),
-      y: -100, // Падает сверху экрана
+      y: -100, 
       vx: 0, vy: 0,
       dir: Math.random() > 0.5 ? 1 : -1,
       state: 'fall',
@@ -593,7 +601,7 @@
       // Замок состояния на 4 секунды (чтобы анимация успела закончиться)
       if (now - sh.lastStateChange < 4000) return; 
 
-      // Очень ленивый питомец: 80% стоит, 20% идёт
+      // Ленивый питомец: 80% стоит, 20% идёт
       if (Math.random() > 0.80 && shWalkB64) {
         sh.state = 'walk';
         sh.dir = Math.random() > 0.5 ? 1 : -1;
@@ -617,17 +625,17 @@
 
     activeShimejis.forEach(sh => {
       if (sh === draggedShimeji) {
-        // перетаскивание
+        // Перетаскивание
       } else if (sh.state === 'fall') {
-        sh.vy += 0.4; // Лёгкая гравитация
+        sh.vy += 0.4; 
         sh.x += sh.vx;
         sh.y += sh.vy;
         sh.vx *= 0.95; 
 
         if (sh.y >= floor) {
           sh.y = floor;
-          sh.vy *= -0.3; // Мягкий отскок
-          sh.vx *= 0.6; // Трение
+          sh.vy *= -0.3; 
+          sh.vx *= 0.6; 
           if (Math.abs(sh.vy) < 1.5) {
             sh.vy = 0; sh.vx = 0;
             sh.state = 'idle';
@@ -639,7 +647,7 @@
         if (sh.x >= rightWall) { sh.x = rightWall; sh.vx *= -0.7; sh.dir = -1; }
         
       } else if (sh.state === 'walk') {
-        sh.x += 0.4 * sh.dir; // Медленная ленивая походка
+        sh.x += 0.4 * sh.dir; 
         if (sh.x <= 0) { sh.x = 0; sh.dir = 1; }
         if (sh.x >= rightWall) { sh.x = rightWall; sh.dir = -1; }
       }
@@ -720,9 +728,13 @@
        const b64 = evt.target.result;
        const el = document.getElementById(`shim-${type}-preview`);
        el.style.backgroundImage = `url(${b64})`; el.textContent = '';
-       if (type === 'idle') { localStorage.setItem('shimeji_idle', b64); shIdleB64 = b64; } 
-       else { localStorage.setItem('shimeji_walk', b64); shWalkB64 = b64; }
-       
+       if (type === 'idle') {
+           localStorage.setItem('shimeji_idle', b64);
+           shIdleB64 = b64;
+       } else {
+           localStorage.setItem('shimeji_walk', b64);
+           shWalkB64 = b64;
+       }
        activeShimejis.forEach(sh => {
            if (sh.state === 'walk') setShimejiVisual(sh, 'walk');
            else setShimejiVisual(sh, 'idle');
@@ -867,7 +879,7 @@
         cancelEditingTask(); 
       }
       renderKanban(); renderCalendar();
-    } catch (err) { alert('Ошибка! Убедись, что выполнил SQL запрос!'); }
+    } catch (err) { alert('Ошибка! Убедись, что выполнил SQL запрос: alter table tasks add column cover text default null;'); }
   }
 
   async function toggleTaskStatus(id, currentStatus) {
@@ -902,7 +914,8 @@
       const isDone = task.status === 'done';
       if (isDone) cDone++; else cTodo++;
 
-      const dObj = new Date(task.task_date);
+      const parts = task.task_date.split('-');
+      const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
       const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
       let badge = '';
@@ -939,31 +952,42 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ
+  // КАЛЕНДАРЬ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
   // ==========================================
+  let calendarDate = new Date();
+  calendarDate.setDate(1); // Предотвращаем баг 31-го числа при переключении месяцев
+
   function changeMonth(dir) {
-    currentDate.setMonth(currentDate.getMonth() + dir);
+    calendarDate.setMonth(calendarDate.getMonth() + dir);
     renderCalendar();
   }
 
+  function getLocalDateString(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
   function renderCalendar() {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
     const monthNames = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
     document.getElementById('calendar-month-year').textContent = `${monthNames[month]} ${year}`;
 
-    const grid = document.getElementById('calendar-grid-cells'); grid.innerHTML = '';
-    const firstDay = new Date(year, month, 1).getDay();
+    const grid = document.getElementById('calendar-grid-cells'); 
+    grid.innerHTML = '';
+    
+    const firstDayDate = new Date(year, month, 1);
+    const firstDay = firstDayDate.getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     let emptyCells = firstDay === 0 ? 6 : firstDay - 1;
     for (let i = 0; i < emptyCells; i++) grid.innerHTML += `<div class="cal-cell empty"></div>`;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const cellDate = new Date(Date.UTC(year, month, day));
-      const cellDateStr = cellDate.toISOString().split('T')[0];
+      const cellDate = new Date(year, month, day);
+      const cellDateStr = getLocalDateString(year, month, day);
       const cellDayOfWeek = cellDate.getDay().toString();
       
       let isToday = cellDateStr === todayStr ? 'today' : '';
@@ -971,11 +995,17 @@
 
       tasks.forEach(task => {
         let showTask = false;
+        
         if (task.repeat_type === '2/2' || task.is_shift) {
-          const tDate = new Date(task.task_date);
-          const utcTask = Date.UTC(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+          const parts = task.task_date.split('-');
+          const taskYear = parseInt(parts[0], 10);
+          const taskMonth = parseInt(parts[1], 10) - 1;
+          const taskDay = parseInt(parts[2], 10);
+          
+          const utcTask = Date.UTC(taskYear, taskMonth, taskDay);
           const utcCell = Date.UTC(year, month, day);
           const diffDays = Math.floor((utcCell - utcTask) / (1000 * 60 * 60 * 24));
+          
           if (diffDays >= 0 && (diffDays % 4 === 0 || diffDays % 4 === 1)) showTask = true;
         } else if (task.repeat_type === 'weekly') {
           if (cellDateStr >= task.task_date && task.repeat_days.includes(cellDayOfWeek)) showTask = true;
@@ -991,16 +1021,14 @@
           cellHtml += `<div class="cal-task ${isDone} ${isShift}" ${styleStr} title="${task.title}">${task.title}</div>`;
         }
       });
-      cellHtml += `</div>`; grid.innerHTML += cellHtml;
+      cellHtml += `</div>`; 
+      grid.innerHTML += cellHtml;
     }
   }
 
   // ==========================================
   // БАЗА КАРТОЧЕК: ОБЩАЯ ЛОГИКА И ПАРСИНГ
   // ==========================================
-  let pracSubject = 'all'; let pracTopics = new Set();
-  let edSubject = 'all';   let edTopics = new Set();
-
   function formatSmartMathAndText(rawText) {
     if (!rawText) return '';
     let text = rawText.trim();
@@ -1176,10 +1204,8 @@
   function nextCard() { currentIndex = (currentIndex + 1) % filteredPracticeDeck.length; renderPracticeCard(); }
 
   // ==========================================
-  // РЕДАКТОР БАЗЫ
+  // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
-  let currentQuestionMode = 'text'; let currentEditorMode = 'math'; let currentUploadedImageBase64 = '';
-  
   function setEditorSubject(subj, el) { edSubject = subj; document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); updateEditorTopics(true); filterEditorDeck(); }
   function updateEditorTopics(reset = false) {
     const container = document.getElementById('editor-topics-list');
