@@ -281,7 +281,7 @@
     .item-question { font-size: 0.98rem; margin: 8px 0; text-align: left; }
     .item-answer { font-size: 1.05rem; background: rgba(0,0,0,0.35); padding: 12px; border-radius: 8px; overflow-x: auto; }
     .item-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .edit-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+    .edit-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.80rem; white-space: nowrap; }
     .edit-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(99, 102, 241, 0.1); }
     .delete-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--danger); font-size: 1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; text-align: center; }
     .delete-btn:hover { background: var(--danger-bg); border-color: var(--danger); }
@@ -423,7 +423,7 @@
       </div>
     </div>
 
-    <!-- ИНКУБАТОР (Ожидают возрождения) -->
+    <!-- ИНКУБАТОР -->
     <div class="incubator-panel">
       <div class="incubator-header" onclick="toggleIncubator()">
         <span>🔁 Ожидают возрождения по графику (<span id="count-incubator">0</span>)</span>
@@ -1361,33 +1361,20 @@
   }
 
   async function cleanCalendarDatabase() {
-    if (!confirm('Очистить базу от старого мусора и дубликатов? В работе останутся только актуальные задачи, выполненные и ожидающие в инкубаторе.')) return;
+    if (!confirm('Почистить календарь? В базе останутся только задачи "В планах", "Выполнено" и "Инкубатор".')) return;
     try {
-      // Оставляем в памяти строго нужные задачи
-      const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
-      
-      // Перезаписываем базу данных актуальным списком
-      await supabaseClient.from('tasks').delete().neq('id', 0);
-      if (validTasks.length > 0) {
-        // Убираем временные id для вставки (или апсертим)
-        const cleanPayload = validTasks.map(t => ({
-          title: t.title,
-          task_date: t.task_date,
-          time_appear: t.time_appear,
-          time_due: t.time_due,
-          repeat_type: t.repeat_type,
-          repeat_days: t.repeat_days,
-          is_shift: t.is_shift,
-          cover: t.cover,
-          status: t.status,
-          position: t.position,
-          is_incubating: t.is_incubating,
-          completed_dates: t.completed_dates
-        }));
-        await supabaseClient.from('tasks').insert(cleanPayload);
+      const { data: allTasks, error } = await supabaseClient.from('tasks').select('*');
+      if (error) throw error;
+
+      const validTasks = allTasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
+      const validIds = new Set(validTasks.map(t => t.id));
+      const trashIds = allTasks.filter(t => !validIds.has(t.id)).map(t => t.id);
+
+      if (trashIds.length > 0) {
+        await supabaseClient.from('tasks').delete().in('id', trashIds);
       }
 
-      alert('Календарь и база успешно очищены!');
+      alert('Календарь успешно почищен!');
       fetchTasks();
     } catch(err) {
       alert('Ошибка при очистке: ' + err.message);
