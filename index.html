@@ -141,9 +141,11 @@
     .kanban-col h3 { font-size: 1rem; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
     .task-count { background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; }
 
-    .task-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s; overflow: hidden; cursor: grab; user-select: none; }
+    .task-list-container { min-height: 220px; display: flex; flex-direction: column; gap: 10px; }
+
+    .task-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; transition: transform 0.15s ease, box-shadow 0.2s, opacity 0.2s; overflow: hidden; cursor: grab; user-select: none; }
     .task-card:active { cursor: grabbing; }
-    .task-card.dragging { opacity: 0.4; transform: scale(0.97); }
+    .task-card.dragging { opacity: 0.35; transform: scale(0.98); }
     .task-cover { width: 100%; height: 45px; background-size: cover; background-position: center; border-bottom: 1px solid var(--border); }
     .task-card.done .task-cover { filter: grayscale(1) opacity(0.5); }
     
@@ -371,11 +373,11 @@
     <div class="kanban-board">
       <div class="kanban-col" id="col-todo" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'todo')">
         <h3>В планах <span class="task-count" id="count-todo">0</span></h3>
-        <div id="todo-list"></div>
+        <div class="task-list-container" id="todo-list"></div>
       </div>
       <div class="kanban-col" id="col-done" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'done')">
         <h3>Выполнено <span class="task-count" id="count-done">0</span></h3>
-        <div id="done-list"></div>
+        <div class="task-list-container" id="done-list"></div>
       </div>
     </div>
   </section>
@@ -766,13 +768,9 @@
        const b64 = evt.target.result;
        const el = document.getElementById(`shim-${type}-preview`);
        el.style.backgroundImage = `url(${b64})`; el.textContent = '';
-       if (type === 'idle') {
-           localStorage.setItem('shimeji_idle', b64);
-           shIdleB64 = b64;
-       } else {
-           localStorage.setItem('shimeji_walk', b64);
-           shWalkB64 = b64;
-       }
+       if (type === 'idle') { localStorage.setItem('shimeji_idle', b64); shIdleB64 = b64; } 
+       else { localStorage.setItem('shimeji_walk', b64); shWalkB64 = b64; }
+       
        activeShimejis.forEach(sh => {
            if (sh.state === 'walk') setShimejiVisual(sh, 'walk');
            else setShimejiVisual(sh, 'idle');
@@ -795,7 +793,7 @@
 
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & DRAG AND DROP
+  // ТРЕКЕР ЗАДАЧ & ПОЛНОЦЕННЫЙ DRAG & DROP СОРТИРОВКИ
   // ==========================================
   let editingTaskId = null;
   let currentTaskCover = null;
@@ -838,7 +836,7 @@
 
   async function fetchTasks() {
     try {
-      const { data, error } = await supabaseClient.from('tasks').select('*').order('task_date', { ascending: true });
+      const { data, error } = await supabaseClient.from('tasks').select('*').order('position', { ascending: true }).order('id', { ascending: false });
       if (error) throw error;
       tasks = data || []; renderKanban(); renderCalendar();
     } catch (err) { console.error('Ошибка загрузки задач:', err); }
@@ -923,7 +921,8 @@
 
     const taskPayload = { 
         title: titleStr, task_date: dateStr, repeat_type: repeatType,
-        repeat_days: repeatDays, is_shift: isShiftFlag, cover: currentTaskCover 
+        repeat_days: repeatDays, is_shift: isShiftFlag, cover: currentTaskCover,
+        position: tasks.length 
     };
 
     try {
@@ -936,7 +935,7 @@
       } else {
         const { data, error } = await supabaseClient.from('tasks').insert([taskPayload]).select();
         if (error) throw error;
-        if (data && data[0]) tasks.push(data[0]);
+        if (data && data[0]) tasks.unshift(data[0]);
         cancelEditingTask(); 
       }
       renderKanban(); renderCalendar();
@@ -963,41 +962,104 @@
     } catch (err) { alert('Ошибка: ' + err.message); }
   }
 
-  // Drag and Drop задач
+  // ==========================================
+  // ТОЧНАЯ СОРТИРОВКА И ПЕРЕМЕЩЕНИЕ КАРТОЧЕК
+  // ==========================================
   function handleDragStart(e, id) {
     draggedTaskId = id;
-    e.target.classList.add('dragging');
+    e.currentTarget.classList.add('dragging');
     e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.effectAllowed = 'move';
   }
 
   function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
+    e.currentTarget.classList.remove('dragging');
     document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
   }
 
   function handleDragOver(e) {
     e.preventDefault();
-    e.currentTarget.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+    const container = e.currentTarget.querySelector('.task-list-container');
+    const afterElement = getDragAfterElement(container, e.clientY);
+    const draggingCard = document.querySelector('.task-card.dragging');
+    if (draggingCard && container) {
+      if (afterElement == null) {
+        container.appendChild(draggingCard);
+      } else {
+        container.insertBefore(draggingCard, afterElement);
+      }
+    }
   }
 
   function handleDragLeave(e) {
     e.currentTarget.classList.remove('drag-over');
   }
 
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
   async function handleDrop(e, targetStatus) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
     if (!draggedTaskId) return;
-    
-    const task = tasks.find(t => t.id === draggedTaskId);
-    if (task && task.status !== targetStatus) {
-      task.status = targetStatus;
-      renderKanban();
-      renderCalendar();
-      try {
-        await supabaseClient.from('tasks').update({ status: targetStatus }).eq('id', draggedTaskId);
-      } catch(err) { console.error('Ошибка Drag-drop:', err); }
-    }
+
+    // Считываем обновленный порядок карточек из DOM
+    const todoIds = [...document.querySelectorAll('#todo-list .task-card')].map(el => parseInt(el.dataset.id, 10));
+    const doneIds = [...document.querySelectorAll('#done-list .task-card')].map(el => parseInt(el.dataset.id, 10));
+
+    let updatedTasks = [];
+    let pos = 0;
+
+    todoIds.forEach(id => {
+      const t = tasks.find(item => item.id === id);
+      if (t) {
+        t.status = 'todo';
+        t.position = pos++;
+        updatedTasks.push(t);
+      }
+    });
+
+    doneIds.forEach(id => {
+      const t = tasks.find(item => item.id === id);
+      if (t) {
+        t.status = 'done';
+        t.position = pos++;
+        updatedTasks.push(t);
+      }
+    });
+
+    tasks = updatedTasks;
+    renderKanban();
+    renderCalendar();
+
+    // Сохраняем новые позиции и статусы в облаке
+    try {
+      const updates = tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        task_date: t.task_date,
+        repeat_type: t.repeat_type,
+        repeat_days: t.repeat_days,
+        is_shift: t.is_shift,
+        cover: t.cover,
+        status: t.status,
+        position: t.position
+      }));
+      await supabaseClient.from('tasks').upsert(updates);
+    } catch(err) { console.error('Ошибка сохранения порядка:', err); }
+
     draggedTaskId = null;
   }
 
@@ -1007,9 +1069,8 @@
     todoList.innerHTML = ''; doneList.innerHTML = '';
     
     let cTodo = 0, cDone = 0;
-    const sortedTasks = [...tasks].sort((a,b) => new Date(a.task_date) - new Date(b.task_date));
 
-    sortedTasks.forEach(task => {
+    tasks.forEach(task => {
       const isDone = task.status === 'done';
       if (isDone) cDone++; else cTodo++;
 
@@ -1035,6 +1096,7 @@
 
       const el = document.createElement('div');
       el.className = `task-card ${isDone ? 'done' : ''}`;
+      el.dataset.id = task.id;
       el.draggable = true;
       el.ondragstart = (e) => handleDragStart(e, task.id);
       el.ondragend = handleDragEnd;
@@ -1053,7 +1115,8 @@
           </div>
         </div>
       `;
-      if (isDone) doneList.prepend(el); else todoList.appendChild(el);
+      if (isDone) doneList.appendChild(el); 
+      else todoList.appendChild(el);
     });
 
     document.getElementById('count-todo').textContent = cTodo;
@@ -1506,7 +1569,7 @@
     loadBackground();
     fetchTasks();
     fetchDeck();
-    loadPersistedShimejis(); // Восстанавливаем сохраненных питомцев
+    loadPersistedShimejis();
   });
 </script>
 </body>
