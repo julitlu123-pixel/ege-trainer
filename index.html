@@ -68,6 +68,7 @@
     .brand-logo svg { width: 22px; height: 22px; }
     h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
     
+    /* Табы (Навигация) */
     .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
     @media(min-width: 768px) { .tabs { width: auto; } }
     .tabs button {
@@ -142,14 +143,25 @@
     @media(min-width: 768px) {
       .kanban-board { flex-direction: row; }
     }
-    .kanban-col { flex: 1; width: 100%; background: var(--trello-col); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-height: 280px; backdrop-filter: blur(5px); transition: background 0.2s; }
+    .kanban-col { flex: 1; width: 100%; background: var(--trello-col); border: 1px solid var(--border); border-radius: 12px; padding: 14px; backdrop-filter: blur(5px); transition: background 0.2s; }
     .kanban-col.drag-over { background: rgba(99, 102, 241, 0.15); border-color: var(--accent); }
     .kanban-col h3 { font-size: 1rem; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
     .task-count { background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; }
 
-    .task-list-container { min-height: 220px; display: flex; flex-direction: column; gap: 10px; }
+    .task-list-container { 
+      max-height: 480px; 
+      overflow-y: auto; 
+      overflow-x: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
+      padding-right: 4px;
+    }
+    .task-list-container::-webkit-scrollbar { width: 4px; }
+    .task-list-container::-webkit-scrollbar-track { background: transparent; }
+    .task-list-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
-    .task-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; transition: transform 0.15s ease, box-shadow 0.2s, opacity 0.2s; overflow: hidden; cursor: grab; user-select: none; }
+    .task-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; transition: transform 0.15s ease, box-shadow 0.2s, opacity 0.2s; overflow: hidden; cursor: grab; user-select: none; flex-shrink: 0; }
     .task-card:active { cursor: grabbing; }
     .task-card.dragging { opacity: 0.35; transform: scale(0.98); }
     .task-cover { width: 100%; height: 45px; background-size: cover; background-position: center; border-bottom: 1px solid var(--border); }
@@ -171,33 +183,19 @@
     .task-action-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
     .task-action-btn.del:hover { background: var(--danger); border-color: var(--danger); }
 
-    /* СПИСОК ПОВТОРЯЮЩИХСЯ ЗАДАЧ (СВОРАЧИВАЕМЫЙ ИНКУБАТОР) */
+    /* ИНКУБАТОР */
     .incubator-panel {
-      margin-top: 24px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 18px;
-      backdrop-filter: blur(10px);
+      margin-top: 24px; background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(10px);
     }
     .incubator-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-      font-weight: 600;
-      font-size: 0.95rem;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none; font-weight: 600; font-size: 0.95rem;
     }
     .incubator-body {
-      margin-top: 14px;
-      display: none;
-      flex-direction: column;
-      gap: 10px;
+      margin-top: 14px; display: none; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto;
     }
-    .incubator-body.open {
-      display: flex;
-    }
+    .incubator-body.open { display: flex; }
 
     /* =========================================
        КАЛЕНДАРЬ
@@ -421,7 +419,7 @@
       </div>
     </div>
 
-    <!-- СВОРАЧИВАЕМЫЙ СПИСОК ПОВТОРЯЮЩИХСЯ ЗАДАЧ (ИНКУБАТОР) -->
+    <!-- ИНКУБАТОР (Ожидают возрождения) -->
     <div class="incubator-panel">
       <div class="incubator-header" onclick="toggleIncubator()">
         <span>🔁 Ожидают возрождения по графику (<span id="count-incubator">0</span>)</span>
@@ -842,7 +840,7 @@
 
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ, ВРЕМЯ И ИНКУБАТОР
+  // ТРЕКЕР ЗАДАЧ & ИНКУБАТОР (С ЗАЩИТОЙ ОТ ДУБЛИКАТОВ)
   // ==========================================
   let editingTaskId = null;
   let currentTaskCover = null;
@@ -890,7 +888,6 @@
 
   function clearTaskCover() { currentTaskCover = null; document.getElementById('task-cover-preview').style.display = 'none'; }
 
-  // Проверка задач на наступление времени появления
   function checkIncubatorAwakening() {
     const today = new Date();
     const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
@@ -899,7 +896,6 @@
     let changed = false;
     tasks.forEach(task => {
       if (task.is_incubating) {
-        // Если дата задачи уже наступила (или прошла) и время появления пришло
         if (task.task_date < todayStr || (task.task_date === todayStr && (task.time_appear || '00:00') <= curTimeStr)) {
           task.is_incubating = false;
           task.status = 'todo';
@@ -1037,7 +1033,7 @@
         cancelEditingTask(); 
       }
       renderKanban(); renderCalendar();
-    } catch (err) { alert('Ошибка сохранения! Убедись, что выполнил SQL-запрос для времени!'); }
+    } catch (err) { alert('Ошибка сохранения задачи!'); }
   }
 
   function getNextOccurrenceDate(task, fromDateStr) {
@@ -1082,9 +1078,6 @@
     return fromDateStr;
   }
 
-  // ==========================================
-  // ВЫПОЛНЕНИЕ ЗАДАЧИ: ПЕРЕХОД В DONE + ОТПРАВКА КОПИИ В ИНКУБАТОР
-  // ==========================================
   async function toggleTaskStatus(id, currentStatus) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -1092,45 +1085,46 @@
     const isRepeating = (task.repeat_type && task.repeat_type !== 'none') || task.is_shift;
 
     if (isRepeating && currentStatus === 'todo') {
-      // 1. Текущая карточка помечается выполненной на сегодня и уходит в DONE
       task.status = 'done';
       let compDates = (task.completed_dates || '').split(',').filter(Boolean);
       if (!compDates.includes(task.task_date)) compDates.push(task.task_date);
       task.completed_dates = compDates.join(',');
 
-      // 2. Рассчитываем дату следующего появления
       const nextDate = getNextOccurrenceDate(task, task.task_date);
+      
+      // Защита от дубликатов: проверяем, нет ли уже в инкубаторе задачи с таким же названием и датой
+      const alreadyExists = tasks.some(t => t.title === task.title && t.task_date === nextDate && t.is_incubating);
 
-      // 3. Создаем её копию, которая будет ждать в Инкубаторе
-      const nextTaskPayload = {
-        title: task.title,
-        task_date: nextDate,
-        time_appear: task.time_appear || '00:00',
-        time_due: task.time_due || '23:59',
-        repeat_type: task.repeat_type,
-        repeat_days: task.repeat_days,
-        is_shift: task.is_shift,
-        cover: task.cover,
-        position: tasks.length + 1,
-        is_incubating: true, // Сидит в инкубаторе до своего времени
-        status: 'todo',
-        completed_dates: task.completed_dates
-      };
-
-      // Сохраняем в память и сразу рендерим
       renderKanban();
       renderCalendar();
 
       try {
         await supabaseClient.from('tasks').update({ status: 'done', completed_dates: task.completed_dates }).eq('id', id);
-        const { data } = await supabaseClient.from('tasks').insert([nextTaskPayload]).select();
-        if (data && data[0]) tasks.push(data[0]);
+        
+        if (!alreadyExists) {
+          const nextTaskPayload = {
+            title: task.title,
+            task_date: nextDate,
+            time_appear: task.time_appear || '00:00',
+            time_due: task.time_due || '23:59',
+            repeat_type: task.repeat_type,
+            repeat_days: task.repeat_days,
+            is_shift: task.is_shift,
+            cover: task.cover,
+            position: tasks.length + 1,
+            is_incubating: true,
+            status: 'todo',
+            completed_dates: ''
+          };
+          const { data } = await supabaseClient.from('tasks').insert([nextTaskPayload]).select();
+          if (data && data[0]) tasks.push(data[0]);
+        }
+        
         renderKanban();
         renderCalendar();
       } catch(err) { console.error('Ошибка:', err); }
 
     } else {
-      // Обычная разовая задача
       const newStatus = currentStatus === 'todo' ? 'done' : 'todo';
       task.status = newStatus;
       renderKanban();
@@ -1253,12 +1247,12 @@
         completed_dates: t.completed_dates
       }));
       await supabaseClient.from('tasks').upsert(updates);
-    } catch(err) { console.error('Ошибка:', err); }
+    } catch(err) { console.error('Ошибка сохранения порядка:', err); }
 
     draggedTaskId = null;
   }
 
-  function renderTaskCardHTML(task, isDone) {
+  function renderTaskCardHTML(task, isDone, isIncubating = false) {
     const parts = task.task_date.split('-');
     const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1284,11 +1278,14 @@
       else coverHtml = `<div class="task-cover" style="background-image: url(${task.cover});"></div>`;
     }
 
+    // Если задача в инкубаторе, убираем чекбокс выполнения, чтобы она не зачёркивалась
+    const checkboxHtml = isIncubating ? '' : `<input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${task.id}, '${task.status}')">`;
+
     return `
       <div class="task-card ${isDone ? 'done' : ''}" data-id="${task.id}" draggable="true" ondragstart="handleDragStart(event, ${task.id})" ondragend="handleDragEnd(event)">
         ${coverHtml}
         <div class="task-card-body">
-          <input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${task.id}, '${task.status}')">
+          ${checkboxHtml}
           <div class="task-content">
             <div class="task-title">${task.title}</div>
             <div class="task-meta">
@@ -1319,17 +1316,16 @@
 
     tasks.forEach(task => {
       if (task.is_incubating) {
-        // Ожидает в инкубаторе
         cInc++;
-        incubatorList.innerHTML += renderTaskCardHTML(task, false);
+        incubatorList.innerHTML += renderTaskCardHTML(task, false, true); // true = в инкубаторе без чекбокса
       } else {
         const isDone = task.status === 'done';
         if (isDone) {
           cDone++;
-          doneList.innerHTML += renderTaskCardHTML(task, true);
+          doneList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, true, false)));
         } else {
           cTodo++;
-          todoList.innerHTML += renderTaskCardHTML(task, false);
+          todoList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false)));
         }
       }
     });
@@ -1802,7 +1798,6 @@
     fetchTasks();
     fetchDeck();
     loadPersistedShimejis();
-    // Проверяем пробуждение задач каждую минуту
     setInterval(checkIncubatorAwakening, 60000);
   });
 </script>
