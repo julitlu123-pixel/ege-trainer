@@ -197,15 +197,15 @@
     .badge-Математика { color: var(--badge-math); border: 1px solid var(--badge-math); }
     .badge-Русский { color: var(--badge-rus); border: 1px solid var(--badge-rus); }
 
-    .question-box { font-size: 1.28rem; font-weight: 600; margin: 18px 0; line-height: 1.7; overflow-x: auto; }
+    /* ОТОБРАЖЕНИЕ ВОПРОСА (Слева) */
+    .question-box { font-size: 1.15rem; font-weight: 600; margin: 18px 0; line-height: 1.6; overflow-x: auto; text-align: left; }
+    
+    /* ОТОБРАЖЕНИЕ ОТВЕТА (По центру, всегда LaTeX) */
     .answer-box { margin-top: 18px; padding: 20px 24px; background: rgba(0,0,0,0.45); border-radius: 8px; border-left: 4px solid var(--accent); display: none; font-size: 1.18rem; overflow-x: auto; }
+    
     .flashcard-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
     .card-img-container { margin: 14px 0 18px 0; text-align: center; }
     .card-img { max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); padding: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-
-    .katex-rendered-block { display: block; width: 100%; line-height: 1.8; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
-    .katex-rendered-block .katex-display { margin: 0.4em 0 !important; text-align: left !important; }
-    .katex-rendered-block .katex { font-size: 1.12em; }
 
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 6px; }
@@ -222,10 +222,10 @@
     .mode-btn { padding: 5px 12px; font-size: 0.85rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; }
     .mode-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-    .list-item { background: var(--card-bg); border: 1px solid var(--border); padding: 20px 24px; border-radius: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); gap: 16px; }
+    .list-item { background: var(--card-bg); border: 1px solid var(--border); padding: 20px 24px; border-radius: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); gap: 16px; flex-wrap: wrap; }
     .item-content { flex: 1; min-width: 0; }
-    .item-question { font-size: 1.08rem; font-weight: 600; margin: 10px 0; }
-    .item-answer { font-size: 1.02rem; background: rgba(0,0,0,0.35); padding: 14px; border-radius: 8px; overflow-x: auto; }
+    .item-question { font-size: 1.05rem; margin: 10px 0; text-align: left; }
+    .item-answer { font-size: 1.1rem; background: rgba(0,0,0,0.35); padding: 14px; border-radius: 8px; overflow-x: auto; }
     .item-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
     .edit-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
     .edit-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(99, 102, 241, 0.1); }
@@ -598,10 +598,8 @@
     activeShimejis.forEach(sh => {
       if (sh === draggedShimeji || sh.state === 'fall' || sh.state === 'drag') return;
       
-      // Замок состояния на 4 секунды (чтобы анимация успела закончиться)
       if (now - sh.lastStateChange < 4000) return; 
 
-      // Ленивый питомец: 80% стоит, 20% идёт
       if (Math.random() > 0.80 && shWalkB64) {
         sh.state = 'walk';
         sh.dir = Math.random() > 0.5 ? 1 : -1;
@@ -916,7 +914,8 @@
 
       const parts = task.task_date.split('-');
       const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
-      const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      // Добавлено отображение года по просьбе пользователя
+      const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 
       let badge = '';
       if (task.repeat_type === '2/2' || task.is_shift) badge = `<span class="task-badge-shift">🔁 2/2</span>`;
@@ -952,10 +951,10 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
+  // КАЛЕНДАРЬ
   // ==========================================
   let calendarDate = new Date();
-  calendarDate.setDate(1); // Предотвращаем баг 31-го числа при переключении месяцев
+  calendarDate.setDate(1);
 
   function changeMonth(dir) {
     calendarDate.setMonth(calendarDate.getMonth() + dir);
@@ -1029,41 +1028,68 @@
   // ==========================================
   // БАЗА КАРТОЧЕК: ОБЩАЯ ЛОГИКА И ПАРСИНГ
   // ==========================================
-  function formatSmartMathAndText(rawText) {
-    if (!rawText) return '';
-    let text = rawText.trim();
-    if (text.startsWith('\\text{') && text.endsWith('}')) text = text.slice(6, -1);
-
-    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    if (!hasCyrillic && !text.includes('$') && (text.includes('\\') || text.includes('^') || text.includes('_') || text.includes('='))) {
-        return `$$ ${text} $$`;
-    }
-
-    text = text.replace(/\\quad/g, '  ');
-    text = text.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}');
-    text = text.replace(/(\d+)\^\\circ/g, '$$$1^\\circ$$');
-
-    if (!text.includes('$')) {
-        text = text.replace(/(?<!\$)([a-zA-Z][a-zA-Z0-9_\^\{\}]*\s*=\s*[^;\n\)]+)(?!\$)/g, (m) => /[а-яА-ЯёЁ]/.test(m) ? m : `$${m.trim()}$`);
-        text = text.replace(/(?<!\$)(\\[a-zA-Z]+(\{[\s\S]*?\})*(\^\{?[\s\S]*?\}?)?(_\{?[\s\S]*?\}?)?)(?!\$)/g, '$$$1$$');
-    }
-
-    let parts = text.split(/(?:;\s*(?=\d+\.|\b[А-ЯA-Z]))|\n+/);
-    if (parts.length > 1) {
-        return `<div class="formatted-math-text">${parts.map(p => `<span class="formatted-math-line">${p.trim()}</span>`).join('')}</div>`;
-    }
-    return text;
-  }
-
-  function renderLatexToElement(elementId, rawContent) {
+  
+  // 1. Умный парсер для ВОПРОСОВ (текст слева + inline математика)
+  function renderQuestion(elementId, rawContent) {
     const el = document.getElementById(elementId);
-    if (!el || !window.katex) return;
-    el.innerHTML = formatSmartMathAndText(rawContent);
+    if (!el) return;
+    
+    let text = rawContent.trim();
+    if (!/[а-яА-ЯёЁ]/.test(text) && !text.includes('$')) {
+        text = `$$ ${text} $$`;
+    } else {
+        text = text.replace(/\n/g, '<br>');
+        text = text.replace(/(?<!\$)(\d+\^\\circ)(?!\$)/g, '$$$1$$');
+    }
+
+    el.innerHTML = text;
     if (window.renderMathInElement) {
         renderMathInElement(el, {
-            delimiters: [ {left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false} ],
+            delimiters: [
+                {left: "$$", right: "$$", display: true},
+                {left: "$", right: "$", display: false},
+                {left: "\\[", right: "\\]", display: true},
+                {left: "\\(", right: "\\)", display: false}
+            ],
             throwOnError: false, errorColor: 'inherit'
         });
+    }
+  }
+
+  // 2. Бронебойный парсер для ОТВЕТОВ (Всегда чистый LaTeX по центру экрана)
+  function forceAnswerLatex(rawText) {
+    let t = rawText.trim();
+    if (t.startsWith('$$') && t.endsWith('$$')) t = t.slice(2, -2).trim();
+    else if (t.startsWith('$') && t.endsWith('$')) t = t.slice(1, -1).trim();
+
+    t = t.replace(/\n/g, ' \\\\ ');
+
+    const tokens = t.split(/([а-яА-ЯёЁ][а-яА-ЯёЁ\s\.,!\?:;\(\)\-]*[а-яА-ЯёЁ\.,!\?:;\(\)\-]?)/g);
+    let latexParts = tokens.map(token => {
+        if (!token) return '';
+        if (/[а-яА-ЯёЁ]/.test(token)) {
+            if (token.includes('\\text{')) return token;
+            return `\\text{${token}}`;
+        }
+        return token;
+    });
+    
+    let finalTex = latexParts.join(' ');
+    if (finalTex.includes('\\\\')) {
+        finalTex = `\\begin{aligned} ${finalTex} \\end{aligned}`;
+    }
+    return finalTex;
+  }
+
+  function renderAnswer(elementId, rawContent) {
+    const el = document.getElementById(elementId);
+    if (!el || !window.katex) return;
+    try {
+        katex.render(forceAnswerLatex(rawContent), el, { 
+            displayMode: true, throwOnError: false, errorColor: 'inherit' 
+        });
+    } catch (err) {
+        el.textContent = rawContent;
     }
   }
 
@@ -1144,7 +1170,7 @@
           <div class="meta-tags">
             <span class="badge ${card.subject==='Физика'?'badge-Физика':'badge-Математика'}">${card.subject}</span><span class="topic-tag">${card.topic}</span>
           </div>
-          <div class="question-box"><div id="practice-question-render" class="katex-rendered-block"></div></div>
+          <div class="question-box" id="practice-question-render"></div>
           ${card.image_url ? `<div class="card-img-container"><img src="${card.image_url}" class="card-img"></div>` : ''}
           
           <div class="user-practice-input-section" id="practice-input-block">
@@ -1187,7 +1213,10 @@
         <button class="btn-secondary" style="padding:6px 12px;" onclick="filteredPracticeDeck.sort(()=>Math.random()-0.5); currentIndex=0; renderPracticeCard();">🔀 Перемешать</button>
       </div>
     `;
-    setTimeout(() => { renderLatexToElement('practice-question-render', card.question); renderLatexToElement('practice-answer-render', card.answer); }, 10);
+    setTimeout(() => { 
+        renderQuestion('practice-question-render', card.question); 
+        renderAnswer('practice-answer-render', card.answer); 
+    }, 10);
   }
 
   function cleanMathString(str) { return (str || '').replace(/\s+/g, '').replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\left/g, '').replace(/\\right/g, '').replace(/\\cdot/g, '').replace(/\*/g, '').replace(/[{}]/g, '').toLowerCase(); }
@@ -1206,6 +1235,8 @@
   // ==========================================
   // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
+  let currentQuestionMode = 'text'; let currentEditorMode = 'math'; let currentUploadedImageBase64 = '';
+  
   function setEditorSubject(subj, el) { edSubject = subj; document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); updateEditorTopics(true); filterEditorDeck(); }
   function updateEditorTopics(reset = false) {
     const container = document.getElementById('editor-topics-list');
@@ -1320,7 +1351,7 @@
       el.innerHTML = `
         <div class="item-content">
           <div class="meta-tags"><span class="badge ${item.subject==='Физика'?'badge-Физика':'badge-Математика'}">${item.subject}</span><span class="topic-tag">${item.topic}</span></div>
-          <div class="item-question"><div id="${qId}" class="katex-rendered-block"></div></div>
+          <div class="item-question" id="${qId}"></div>
           ${item.image_url ? `<div style="margin: 6px 0;"><img src="${item.image_url}" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--border);" alt="Чертёж"></div>` : ''}
           <div class="item-answer"><div id="${aId}" class="katex-rendered-block"></div></div>
         </div>
@@ -1330,7 +1361,10 @@
         </div>
       `;
       list.appendChild(el);
-      setTimeout(() => { renderLatexToElement(qId, item.question); renderLatexToElement(aId, item.answer); }, 0);
+      setTimeout(() => { 
+          renderQuestion(qId, item.question); 
+          renderAnswer(aId, item.answer); 
+      }, 0);
     });
   }
 
