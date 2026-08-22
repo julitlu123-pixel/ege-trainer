@@ -1361,7 +1361,7 @@
   }
 
   async function cleanCalendarDatabase() {
-    if (!confirm('Очистить базу от старого мусора и дубликатов? В работе останутся только актуальные задачи (в планах, выполненные и в инкубаторе).')) return;
+    if (!confirm('Очистить календарь и базу от старого мусора и дубликатов? В работе останутся только актуальные активные задачи, выполненные и ожидающие в инкубаторе.')) return;
     try {
       const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
       
@@ -1384,7 +1384,7 @@
         await supabaseClient.from('tasks').insert(cleanPayload);
       }
 
-      alert('Календарь и база успешно очищены!');
+      alert('Календарь успешно почищен! Сохранены только активные и выполненные задачи.');
       fetchTasks();
     } catch(err) {
       alert('Ошибка при очистке: ' + err.message);
