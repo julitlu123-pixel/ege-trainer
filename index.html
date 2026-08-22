@@ -598,6 +598,8 @@
   let deck = []; 
   let filteredPracticeDeck = []; 
   let filteredEditorDeck = [];
+  let currentIndex = 0;
+  let editingCardId = null;
   
   // ==========================================
   // НАВИГАЦИЯ И ФОН
@@ -1552,7 +1554,8 @@
 
   async function fetchDeck() {
     try {
-      const { data } = await supabaseClient.from('cards').select('*').order('id', { ascending: false });
+      const { data, error } = await supabaseClient.from('cards').select('*').order('id', { ascending: false });
+      if (error) throw error;
       deck = data || []; 
       updatePracticeTopics(true); 
       updateEditorTopics(true);
@@ -1608,7 +1611,6 @@
       pracTopics.clear();
     }
     
-    // Прямое управление атрибутами checked для железной привязки true/false
     document.querySelectorAll('#practice-topics-list input[type="checkbox"]').forEach(chk => {
       chk.checked = selectState;
     });
@@ -1712,22 +1714,44 @@
   // ==========================================
   // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
-  function setEditorSubject(subj, el) { edSubject = subj; document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); el.classList.add('active'); updateEditorTopics(true); filterEditorDeck(); }
+  function setEditorSubject(subj, el) { 
+    edSubject = subj; 
+    document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); 
+    el.classList.add('active'); 
+    updateEditorTopics(true); 
+    filterEditorDeck(); 
+  }
+
   function updateEditorTopics(reset = false) {
     const container = document.getElementById('editor-topics-list');
     const available = edSubject === 'all' ? deck : deck.filter(c => c.subject === edSubject);
     const counts = {}; available.forEach(c => { counts[c.topic] = (counts[c.topic] || 0) + 1; });
     const unique = Object.keys(counts);
 
-    if (reset || edTopics.size === 0) edTopics = new Set(unique); else edTopics = new Set(unique.filter(t => edTopics.has(t)));
+    if (reset || edTopics.size === 0) {
+      edTopics = new Set(unique);
+    } else {
+      edTopics = new Set(unique.filter(t => edTopics.has(t)));
+    }
+
     container.innerHTML = '';
     if (unique.length === 0) return container.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem; padding:8px; text-align:center;">Нет доступных разделов</div>';
-    unique.forEach(t => { const isChecked = edTopics.has(t) ? 'checked' : ''; container.innerHTML += `<div class="topic-list-item"><label><input type="checkbox" ${isChecked} onchange="toggleEditorTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label><span class="topic-item-count">${counts[t]}</span></div>`; });
+    
+    unique.forEach(t => { 
+      const isChecked = edTopics.has(t) ? 'checked' : ''; 
+      container.innerHTML += `<div class="topic-list-item"><label><input type="checkbox" ${isChecked} onchange="toggleEditorTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label><span class="topic-item-count">${counts[t]}</span></div>`; 
+    });
   }
-  function toggleEditorTopic(topic, isChecked) { if (isChecked) edTopics.add(topic); else edTopics.delete(topic); filterEditorDeck(); }
+
+  function toggleEditorTopic(topic, isChecked) { 
+    if (isChecked) edTopics.add(topic); else edTopics.delete(topic); 
+    filterEditorDeck(); 
+  }
+
   function toggleAllEditorTopics(selectState) {
     const available = edSubject === 'all' ? deck : deck.filter(c => c.subject === edSubject);
     const unique = [...new Set(available.map(c => c.topic))];
+    
     if (selectState) {
       edTopics = new Set(unique);
     } else {
@@ -1739,6 +1763,11 @@
     });
 
     filterEditorDeck();
+  }
+
+  function filterEditorDeck() {
+    filteredEditorDeck = deck.filter(c => (edSubject === 'all' || c.subject === edSubject) && edTopics.has(c.topic));
+    renderEditorList();
   }
 
   function updateImagePreview(src) { const container = document.getElementById('image-preview-container'); const img = document.getElementById('preview-img-tag'); if (src && src.trim().length > 0) { img.src = src; container.style.display = 'flex'; currentUploadedImageBase64 = src; } else { container.style.display = 'none'; currentUploadedImageBase64 = ''; } }
