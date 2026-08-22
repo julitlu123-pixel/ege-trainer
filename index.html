@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ЕГЭ Тренажёр</title>
+  <title>Личный Дашборд & ЕГЭ Тренажёр</title>
 
-  <!-- Иконка во вкладке браузера (Атом + Книга) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(45 12 12)'/><ellipse cx='12' cy='12' rx='10' ry='4' transform='rotate(-45 12 12)'/><circle cx='12' cy='12' r='2' fill='%236366f1'/></svg>">
 
-  <!-- KaTeX для формул -->
+  <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
-  <!-- MathLive: визуальный конструктор формул -->
+  <!-- MathLive -->
   <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 
-  <!-- Официальная библиотека Supabase JS -->
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -32,16 +31,12 @@
       --danger-bg: rgba(239, 68, 68, 0.15);
       --success: #10b981;
       --success-bg: rgba(16, 185, 129, 0.15);
-      --badge-physics: #38bdf8;
-      --badge-math: #ec4899;
-      --badge-rus: #f59e0b;
-      --status-cloud: #10b981;
       --btn-secondary: #334155;
+      --trello-col: #151e2e;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
@@ -50,425 +45,191 @@
       justify-content: center;
     }
 
-    .container { width: 100%; max-width: 1080px; }
+    .container { width: 100%; max-width: 1100px; }
     
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 16px;
     }
 
     .brand-title { display: flex; align-items: center; gap: 10px; }
-    
     .brand-logo {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
       border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       color: white;
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
       flex-shrink: 0;
     }
-    .brand-logo svg {
-      width: 24px;
-      height: 24px;
-    }
-
+    .brand-logo svg { width: 24px; height: 24px; }
     h1 { font-size: 1.45rem; font-weight: 700; }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--status-cloud);
-      display: inline-block;
-      box-shadow: 0 0 8px var(--status-cloud);
-    }
     
-    .tabs { display: flex; gap: 8px; }
-    button {
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 500;
+    /* Табы (Навигация) */
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tabs button {
+      background: var(--card-bg); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+      border-radius: 8px; cursor: pointer; font-weight: 500;
       transition: all 0.2s;
-      font-family: inherit;
     }
-    button:hover { border-color: var(--accent); }
-    button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 12px; font-weight: 600; font-size: 1rem; }
-    button.btn-primary:hover { background: var(--accent-hover); }
-    button.btn-secondary { background: var(--btn-secondary); }
-    button.btn-secondary:hover { background: #475569; }
+    .tabs button:hover { border-color: var(--accent); }
+    .tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
     .view { display: none; }
     .view.active { display: block; }
+    button.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; border-radius: 8px; border: none; }
+    button.btn-primary:hover { background: var(--accent-hover); }
 
-    /* Панель фильтров */
-    .filter-panel {
+    /* =========================================
+       ТРЕКЕР ЗАДАЧ (TRELLO STYLE)
+       ========================================= */
+    .task-form {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 18px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr auto auto auto;
+      align-items: center;
     }
-    .filter-title { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-    .subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-    .pill {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.05);
-      transition: all 0.2s;
+    .task-form input[type="text"], .task-form input[type="date"] {
+      background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 14px; border-radius: 8px;
     }
-    .pill:hover { border-color: var(--accent); }
-    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .task-form input[type="text"] { width: 100%; }
+    .task-form label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+    .task-form input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 
-    /* СПИСОК ТЕМ */
-    .topics-list-wrapper {
-      background: rgba(0,0,0,0.2);
+    .kanban-board {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .kanban-col {
+      flex: 1;
+      background: var(--trello-col);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      max-height: 180px;
-      overflow-y: auto;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 400px;
     }
-    .topic-list-item {
+    .kanban-col h3 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.15s;
-      user-select: none;
-    }
-    .topic-list-item:hover {
-      background: rgba(255,255,255,0.07);
-    }
-    .topic-list-item label {
-      display: flex;
       align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      width: 100%;
-      margin-bottom: 0;
-      font-size: 0.92rem;
-      font-weight: 500;
     }
-    .topic-list-item input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-    .topic-item-count {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      background: rgba(0,0,0,0.3);
+    .task-count {
+      background: var(--card-bg);
       padding: 2px 8px;
       border-radius: 12px;
-    }
-
-    .toggle-all-btn {
       font-size: 0.8rem;
-      background: rgba(99, 102, 241, 0.15);
-      border: 1px solid var(--accent);
-      color: #a5b4fc;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    .toggle-all-btn:hover {
-      background: var(--accent);
-      color: white;
     }
 
-    /* Карточки тренировки */
-    .flashcard {
+    .task-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 26px 28px;
-      margin-bottom: 18px;
-      overflow: hidden;
-    }
-    .meta-tags { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-    .badge {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .badge-Физика { background: rgba(56, 189, 248, 0.15); color: var(--badge-physics); border: 1px solid var(--badge-physics); }
-    .badge-Математика { background: rgba(236, 72, 153, 0.15); color: var(--badge-math); border: 1px solid var(--badge-math); }
-    .badge-Русский { background: rgba(245, 158, 11, 0.15); color: var(--badge-rus); border: 1px solid var(--badge-rus); }
-
-    .topic-tag { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
-    
-    .question-box {
-      font-size: 1.28rem;
-      font-weight: 600;
-      margin-bottom: 18px;
-      line-height: 1.7;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      overflow-x: auto;
-    }
-
-    .card-img-container {
-      margin: 14px 0 18px 0;
-      text-align: center;
-    }
-    .card-img {
-      max-width: 100%;
-      max-height: 280px;
       border-radius: 8px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.03);
-      padding: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
-    .user-practice-input-section {
-      margin-top: 20px;
-      margin-bottom: 18px;
-    }
-
-    .answer-box {
-      margin-top: 18px;
-      padding: 20px 24px;
-      background: rgba(0,0,0,0.35);
-      border-radius: 8px;
-      border-left: 4px solid var(--accent);
-      display: none;
-      font-size: 1.18rem;
-      line-height: 1.8;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      overflow-x: auto;
-      max-width: 100%;
-    }
-
-    .katex-rendered-block {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      line-height: 1.8;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding-bottom: 4px;
-    }
-    .katex-rendered-block .katex-display {
-      margin: 0.4em 0 !important;
-      text-align: left !important;
-      max-width: 100%;
-    }
-    .katex-rendered-block .katex {
-      font-size: 1.12em;
-    }
-
-    .result-feedback {
-      display: none;
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-    .result-feedback.correct {
-      background: var(--success-bg);
-      color: var(--success);
-      border: 1px solid var(--success);
-    }
-    .result-feedback.info {
-      background: rgba(99, 102, 241, 0.15);
-      color: #a5b4fc;
-      border: 1px solid var(--accent);
-    }
-
-    .flashcard-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
-
-    /* Форма ввода */
-    .form-group { margin-bottom: 16px; }
-    label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
-    input, textarea, select {
-      width: 100%;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 1rem;
-      line-height: 1.5;
-    }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
-
-    .image-uploader-box {
-      border: 1px dashed var(--border);
-      padding: 12px;
-      border-radius: 8px;
-      background: rgba(0,0,0,0.15);
+      padding: 14px;
+      margin-bottom: 12px;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .image-preview-wrapper {
-      display: flex;
-      align-items: center;
       gap: 12px;
-    }
-    .image-preview-wrapper img {
-      max-height: 70px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-    .remove-img-btn {
-      color: var(--danger);
-      background: transparent;
-      border: 1px solid var(--danger);
-      padding: 4px 8px;
-      font-size: 0.8rem;
-    }
-
-    .input-mode-switcher {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-    .mode-btn {
-      padding: 5px 12px;
-      font-size: 0.85rem;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-    .mode-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    .math-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
-      background: rgba(0,0,0,0.25);
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .math-btn {
-      padding: 5px 10px;
-      font-size: 0.88rem;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-    }
-    .math-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-
-    math-field {
-      width: 100%;
-      font-size: 1.25rem;
-      background: var(--card-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      min-height: 52px;
-      display: block;
-    }
-    math-field:focus-within { border-color: var(--accent); outline: none; }
-
-    /* Список карточек */
-    .card-list { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
-    .list-item {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      padding: 20px 24px;
-      border-radius: 10px;
-      display: flex;
-      justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
-      transition: background 0.2s;
-      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .list-item:hover { background: var(--card-hover); }
-    .item-content { flex: 1; min-width: 0; }
-    .item-question {
-      font-size: 1.08rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: var(--text);
-      word-break: break-word;
-      overflow-wrap: break-word;
+    .task-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .task-checkbox {
+      margin-top: 4px; width: 20px; height: 20px; accent-color: var(--success); cursor: pointer;
     }
-    .item-answer {
-      font-size: 1.02rem;
-      color: #cbd5e1;
-      line-height: 1.7;
-      background: rgba(0,0,0,0.25);
-      padding: 14px 18px;
-      border-radius: 8px;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      overflow-x: auto;
-    }
-
-    .item-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .edit-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-    .edit-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(99, 102, 241, 0.1); }
-    .delete-btn {
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--danger);
-      font-size: 1.1rem;
-      cursor: pointer;
-      padding: 5px 9px;
-      border-radius: 6px;
-    }
-    .delete-btn:hover { background: var(--danger-bg); border-color: var(--danger); }
+    .task-content { flex: 1; }
+    .task-title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; }
+    .task-card.done .task-title { text-decoration: line-through; color: var(--text-muted); }
     
-    .form-buttons { display: flex; gap: 10px; margin-top: 8px; }
-    .empty-state { text-align: center; color: var(--text-muted); padding: 40px 0; }
+    .task-meta { display: flex; gap: 8px; font-size: 0.8rem; color: var(--text-muted); align-items: center; }
+    .task-badge-date { background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px; }
+    .task-badge-shift { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+    .task-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; opacity: 0.5; }
+    .task-delete:hover { opacity: 1; }
+
+    /* =========================================
+       КАЛЕНДАРЬ
+       ========================================= */
+    .calendar-header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--card-bg); border: 1px solid var(--border);
+      padding: 16px 24px; border-radius: 12px; margin-bottom: 16px;
+    }
+    .calendar-header-bar button { padding: 8px 16px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; cursor: pointer; }
+    .calendar-header-bar button:hover { background: var(--accent); border-color: var(--accent); }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .day-name {
+      text-align: center; font-weight: 600; color: var(--text-muted); padding: 10px 0; font-size: 0.9rem;
+    }
+    .cal-cell {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 8px; min-height: 100px; padding: 8px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .cal-cell.empty { background: transparent; border: none; }
+    .cal-cell.today { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
+    .cal-date { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; color: var(--text-muted); }
+    .cal-cell.today .cal-date { color: var(--accent); }
+    
+    .cal-task {
+      font-size: 0.75rem; padding: 4px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.05); color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      border-left: 3px solid var(--border);
+    }
+    .cal-task.done { border-left-color: var(--success); text-decoration: line-through; opacity: 0.6; }
+    .cal-task.shift { border-left-color: var(--accent); background: rgba(99, 102, 241, 0.1); }
+
+    /* =========================================
+       ТРЕНАЖЁР (Стили из предыдущих версий)
+       ========================================= */
+    .filter-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+    .subject-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .pill { padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .topics-list-wrapper { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; max-height: 180px; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .topic-list-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; cursor: pointer; }
+    .topic-list-item label { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 0.92rem; }
+    .topic-list-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+    
+    .flashcard { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 26px 28px; margin-bottom: 18px; }
+    .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; background: rgba(255,255,255,0.1); }
+    .question-box { font-size: 1.28rem; font-weight: 600; margin: 18px 0; line-height: 1.7; overflow-x: auto; }
+    .answer-box { margin-top: 18px; padding: 20px 24px; background: rgba(0,0,0,0.35); border-radius: 8px; border-left: 4px solid var(--accent); display: none; font-size: 1.18rem; overflow-x: auto; }
+    .flashcard-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+    
+    /* Формы */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 6px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; }
+    math-field { width: 100%; font-size: 1.25rem; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-height: 52px; display: block; }
+    .math-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; background: rgba(0,0,0,0.25); padding: 8px; border-radius: 8px; }
+    .math-btn { padding: 5px 10px; font-size: 0.88rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; }
+
+    /* Список карточек базы */
+    .list-item { background: var(--card-bg); border: 1px solid var(--border); padding: 20px 24px; border-radius: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; }
+    .item-question { font-size: 1.08rem; font-weight: 600; margin: 10px 0; }
+    .item-answer { font-size: 1.02rem; background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; }
+    
+    /* Скрытие MathLive при неактивной вкладке для избежания багов */
+    .view:not(.active) math-field { display: none; }
   </style>
 </head>
 <body>
@@ -476,893 +237,429 @@
 <div class="container">
   <header>
     <div class="brand-title">
-      <div class="brand-logo" title="Наука и знания">
+      <div class="brand-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(30 12 12)" stroke="white" opacity="0.85"/>
-          <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(-30 12 12)" stroke="white" opacity="0.85"/>
-          <circle cx="12" cy="12" r="1.5" fill="white"/>
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="white" stroke-width="1.6"/>
-          <path d="M6.5 2H20v18H6.5A2.5 2.5 0 0 1 4 17.5V4.5A2.5 2.5 0 0 1 6.5 2z" stroke="white" stroke-width="1.6" fill="rgba(255,255,255,0.15)"/>
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
         </svg>
       </div>
       <div>
-        <h1>ЕГЭ Тренажёр</h1>
+        <h1>Личный Дашборд</h1>
       </div>
-      <span class="status-dot" title="Синхронизировано с облаком Supabase"></span>
     </div>
     <div class="tabs">
-      <button class="active" onclick="switchTab('practice')">Практика</button>
-      <button onclick="switchTab('editor')">База вопросов (<span id="count">...</span>)</button>
+      <button class="active" onclick="switchTab('tracker')">✅ Трекер задач</button>
+      <button onclick="switchTab('calendar')">📅 Календарь</button>
+      <button onclick="switchTab('practice')">🧠 Тренажёр</button>
+      <button onclick="switchTab('editor')">⚙️ База вопросов</button>
     </div>
   </header>
 
-  <!-- ВКЛАДКА ТРЕНИРОВКИ -->
-  <section id="view-practice" class="view active">
+  <!-- =========================================
+       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ (TRELLO)
+       ========================================= -->
+  <section id="view-tracker" class="view active">
+    
+    <div class="task-form">
+      <input type="text" id="task-title" placeholder="например: Доделать риг в Spine, решить тест по физике, купить пряжу...">
+      <input type="date" id="task-date">
+      <label><input type="checkbox" id="task-shift"> Повторять 2/2</label>
+      <button class="btn-primary" style="padding: 10px 20px;" onclick="addTask()">Добавить</button>
+    </div>
+
+    <div class="kanban-board">
+      <div class="kanban-col" id="col-todo">
+        <h3>Планы <span class="task-count" id="count-todo">0</span></h3>
+        <div id="todo-list"></div>
+      </div>
+      <div class="kanban-col" id="col-done">
+        <h3>Выполнено <span class="task-count" id="count-done">0</span></h3>
+        <div id="done-list"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- =========================================
+       ВКЛАДКА 2: КАЛЕНДАРЬ
+       ========================================= -->
+  <section id="view-calendar" class="view">
+    <div class="calendar-header-bar">
+      <button onclick="changeMonth(-1)">&#8592; Назад</button>
+      <h2 id="calendar-month-year">...</h2>
+      <button onclick="changeMonth(1)">Вперёд &#8594;</button>
+    </div>
+    
+    <div class="calendar-grid">
+      <div class="day-name">Пн</div><div class="day-name">Вт</div><div class="day-name">Ср</div>
+      <div class="day-name">Чт</div><div class="day-name">Пт</div><div class="day-name">Сб</div><div class="day-name">Вс</div>
+    </div>
+    <div class="calendar-grid" id="calendar-grid-cells"></div>
+  </section>
+
+  <!-- =========================================
+       ВКЛАДКА 3: ТРЕНАЖЁР
+       ========================================= -->
+  <section id="view-practice" class="view">
     <div class="filter-panel">
-      <div class="filter-title">Предмет:</div>
       <div class="subject-pills">
         <div class="pill active" onclick="setSubjectFilter('all', this)">Все предметы</div>
         <div class="pill" onclick="setSubjectFilter('Физика', this)">Физика</div>
         <div class="pill" onclick="setSubjectFilter('Математика', this)">Математика</div>
         <div class="pill" onclick="setSubjectFilter('Русский язык', this)">Русский язык</div>
       </div>
-
-      <div class="filter-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span>Разделы предмета:</span>
-        <button type="button" class="toggle-all-btn" id="toggle-all-topics-btn" onclick="toggleAllTopicsClick()">Снять всё</button>
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <span style="font-size:0.85rem; font-weight:600; color:var(--text-muted);">РАЗДЕЛЫ:</span>
+        <button style="font-size:0.8rem; padding:4px 8px;" onclick="toggleAllTopicsClick()">Снять всё / Выбрать всё</button>
       </div>
-      
-      <!-- СПИСОК ТЕМ -->
       <div class="topics-list-wrapper" id="topics-filter-list"></div>
     </div>
-
     <div id="practice-card-container"></div>
   </section>
 
-  <!-- ВКЛАДКА РЕДАКТОРА -->
+  <!-- =========================================
+       ВКЛАДКА 4: БАЗА ВОПРОСОВ (РЕДАКТОР)
+       ========================================= -->
   <section id="view-editor" class="view">
-    <form id="add-form" onsubmit="saveCardForm(event)">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-        <div class="form-group">
+    <form class="filter-panel" onsubmit="saveCardForm(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:16px;">
+        <div class="form-group" style="margin:0;">
           <label>Предмет</label>
-          <select id="input-subject" onchange="autoSelectEditorMode(this.value)" required>
+          <select id="input-subject" required>
             <option value="Физика">Физика</option>
             <option value="Математика">Математика</option>
             <option value="Русский язык">Русский язык</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="margin:0;">
           <label>Раздел / Тема</label>
-          <input type="text" id="input-topic" placeholder="например: Планиметрия: Четырёхугольники" required>
+          <input type="text" id="input-topic" placeholder="например: Тригонометрия" required>
         </div>
       </div>
 
-      <!-- ВВОД ВОПРОСА -->
       <div class="form-group">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="margin-bottom:0;">Вопрос / Понятие:</label>
-          <div class="input-mode-switcher">
-            <button type="button" class="mode-btn active" id="btn-q-text" onclick="setQuestionMode('text')">📝 Текст / Формулы</button>
-            <button type="button" class="mode-btn" id="btn-q-math" onclick="setQuestionMode('math')">📐 Word-конструктор</button>
-          </div>
-        </div>
-
-        <div id="q-text-wrapper">
-          <div class="math-toolbar">
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('x^n')">xⁿ Степень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('x_n')">xₙ Индекс</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\frac{a}{b}')">½ Дробь</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\sqrt{x}')">√ Корень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\log_a(b)')">log</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\cdot')">· Умножить</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\alpha')">α</button>
-            <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\Delta')">Δ</button>
-          </div>
-          <textarea id="input-question" rows="2" placeholder="например: Основные свойства квадрата (углы, диагонали, площадь):" required></textarea>
-        </div>
-
-        <div id="q-math-wrapper" style="display:none;">
-          <div class="math-toolbar">
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('#?^{#?}')">xⁿ Степень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('#?_{#?}')">xₙ Индекс</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\sqrt{#?}')">√ Корень</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\log_{#?}(#?)')">log</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\sin(#?)')">sin</button>
-            <button type="button" class="math-btn" onclick="insertQuestionMathTemplate('\\cos(#?)')">cos</button>
-          </div>
-          <math-field id="q-math-field" math-mode-space="\;"></math-field>
-        </div>
+        <label>Вопрос / Понятие:</label>
+        <textarea id="input-question" rows="2" placeholder="Напиши вопрос..." required></textarea>
       </div>
 
-      <!-- ПРИКРЕПЛЕНИЕ РИСУНКА -->
       <div class="form-group">
-        <label>Рисунок / График / Чертёж (по желанию):</label>
-        <div class="image-uploader-box">
-          <div style="display:flex; gap:8px; align-items:center;">
-            <input type="file" id="file-upload-input" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
-            <button type="button" class="mode-btn" onclick="document.getElementById('file-upload-input').click()">📂 Выбрать файл с диска</button>
-            <span style="font-size:0.85rem; color:var(--text-muted);">или нажмите <b>Ctrl+V</b> для вставки скриншота</span>
-          </div>
-          <input type="text" id="input-image-url" placeholder="Или вставьте прямую ссылку на картинку (https://...)" oninput="updateImagePreview(this.value)">
-          
-          <div id="image-preview-container" class="image-preview-wrapper" style="display:none;">
-            <img id="preview-img-tag" src="" alt="Предпросмотр чертежа">
-            <button type="button" class="remove-img-btn" onclick="removeImage()">✕ Удалить рисунок</button>
-          </div>
-        </div>
+        <label>Ответ (формула или текст):</label>
+        <textarea id="input-answer" rows="3" placeholder="Напиши ответ..." required></textarea>
       </div>
 
-      <!-- ВВОД ОТВЕТА -->
-      <div class="form-group">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="margin-bottom:0;">Правильный ответ:</label>
-          <div class="input-mode-switcher">
-            <button type="button" class="mode-btn active" id="btn-editor-math" onclick="setEditorAnswerMode('math')">📐 Формула (Word-стиль)</button>
-            <button type="button" class="mode-btn" id="btn-editor-text" onclick="setEditorAnswerMode('text')">📝 Текст / Определение</button>
-          </div>
-        </div>
-
-        <div id="editor-math-wrapper">
-          <div class="math-toolbar">
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('#?^{#?}')">xⁿ Степень</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('#?_{#?}')">xₙ Индекс</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\sqrt{#?}')">√ Корень</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\log_{#?}(#?)')">log</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\cdot')">· Умножить</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\sin(#?)')">sin</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\cos(#?)')">cos</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\pi')">π</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\alpha')">α</button>
-            <button type="button" class="math-btn" onclick="insertEditorMathTemplate('\\Delta')">Δ</button>
-          </div>
-          <math-field id="editor-math-field" math-mode-space="\;"></math-field>
-        </div>
-
-        <div id="editor-text-wrapper" style="display:none;">
-          <textarea id="editor-text-field" rows="3" placeholder="Введите определение своими словами или формулы..."></textarea>
-        </div>
-      </div>
-
-      <div class="form-buttons">
-        <button type="submit" id="save-btn" class="btn-primary" style="flex:1;">+ Сохранить в облако Supabase</button>
-        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display:none" onclick="cancelEditing()">Отмена</button>
-      </div>
+      <button type="submit" class="btn-primary" id="save-btn" style="width:100%;">+ Сохранить карточку</button>
     </form>
 
     <div class="card-list" id="card-list"></div>
   </section>
+
 </div>
 
 <script>
+  // ==========================================
+  // 1. ИНИЦИАЛИЗАЦИЯ SUPABASE
+  // ==========================================
   const SUPABASE_URL = 'https://lhymatecnqucjdijmgww.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoeW1hdGVjbnF1Y2pkaWptZ3d3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzcyNTgsImV4cCI6MjEwMjU1MzI1OH0.IqlSb0aitLZ5mQUXlVaAfrDp0lwuaJlf2bIbVEb7Ffw';
-
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let deck = [];
-  let currentSubject = 'all';
-  let selectedTopics = new Set();
-  let filteredDeck = [];
-  let currentIndex = 0;
-  let editingCardId = null;
+  // ==========================================
+  // 2. ЛОГИКА ТРЕКЕРА ЗАДАЧ И КАЛЕНДАРЯ
+  // ==========================================
+  let tasks = [];
+  let currentDate = new Date(); // Для календаря
 
-  let currentQuestionMode = 'text';
-  let currentEditorMode = 'math';
-  let currentPracticeMode = 'math';
-  let currentUploadedImageBase64 = '';
+  // Устанавливаем сегодняшнюю дату в форму по умолчанию
+  document.getElementById('task-date').valueAsDate = new Date();
 
-  function updateImagePreview(src) {
-    const container = document.getElementById('image-preview-container');
-    const img = document.getElementById('preview-img-tag');
-    if (src && src.trim().length > 0) {
-      img.src = src;
-      container.style.display = 'flex';
-      currentUploadedImageBase64 = src;
-    } else {
-      container.style.display = 'none';
-      currentUploadedImageBase64 = '';
-    }
-  }
-
-  function removeImage() {
-    document.getElementById('input-image-url').value = '';
-    document.getElementById('file-upload-input').value = '';
-    updateImagePreview('');
-  }
-
-  function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    resizeAndSetImage(file);
-  }
-
-  window.addEventListener('paste', (e) => {
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for (let item of items) {
-      if (item.kind === 'file' && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        resizeAndSetImage(file);
-        break;
+  async function fetchTasks() {
+    try {
+      const { data, error } = await supabaseClient.from('tasks').select('*').order('task_date', { ascending: true });
+      if (error) {
+        if (error.code === '42P01') {
+          console.warn('Таблица tasks еще не создана. Выполни SQL-запрос в Supabase!');
+        } else throw error;
       }
+      tasks = data || [];
+      renderKanban();
+      renderCalendar();
+    } catch (err) { console.error('Ошибка загрузки задач:', err); }
+  }
+
+  async function addTask() {
+    const titleStr = document.getElementById('task-title').value.trim();
+    const dateStr = document.getElementById('task-date').value;
+    const isShift = document.getElementById('task-shift').checked;
+
+    if (!titleStr || !dateStr) return alert('Введи название и дату!');
+
+    try {
+      const { data, error } = await supabaseClient.from('tasks')
+        .insert([{ title: titleStr, task_date: dateStr, is_shift: isShift }])
+        .select();
+      
+      if (error) throw error;
+      if (data && data[0]) tasks.push(data[0]);
+      
+      document.getElementById('task-title').value = '';
+      renderKanban();
+      renderCalendar();
+    } catch (err) { alert('Ошибка: ' + err.message); }
+  }
+
+  async function toggleTaskStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'todo' ? 'done' : 'todo';
+    try {
+      const { error } = await supabaseClient.from('tasks').update({ status: newStatus }).eq('id', id);
+      if (error) throw error;
+      
+      const task = tasks.find(t => t.id === id);
+      if (task) task.status = newStatus;
+      
+      renderKanban();
+      renderCalendar();
+    } catch (err) { alert('Ошибка обновления: ' + err.message); }
+  }
+
+  async function deleteTask(id) {
+    if(!confirm('Точно удалить задачу?')) return;
+    try {
+      await supabaseClient.from('tasks').delete().eq('id', id);
+      tasks = tasks.filter(t => t.id !== id);
+      renderKanban();
+      renderCalendar();
+    } catch (err) { alert('Ошибка: ' + err.message); }
+  }
+
+  function renderKanban() {
+    const todoList = document.getElementById('todo-list');
+    const doneList = document.getElementById('done-list');
+    todoList.innerHTML = ''; doneList.innerHTML = '';
+    
+    let cTodo = 0, cDone = 0;
+
+    // Сортируем: сначала новые
+    const sortedTasks = [...tasks].sort((a,b) => new Date(a.task_date) - new Date(b.task_date));
+
+    sortedTasks.forEach(task => {
+      const isDone = task.status === 'done';
+      if (isDone) cDone++; else cTodo++;
+
+      // Красивый формат даты
+      const dObj = new Date(task.task_date);
+      const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+
+      const el = document.createElement('div');
+      el.className = `task-card ${isDone ? 'done' : ''}`;
+      el.innerHTML = `
+        <input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${task.id}, '${task.status}')">
+        <div class="task-content">
+          <div class="task-title">${task.title}</div>
+          <div class="task-meta">
+            <span class="task-badge-date">📅 ${dateString}</span>
+            ${task.is_shift ? `<span class="task-badge-shift">🔁 График 2/2</span>` : ''}
+          </div>
+        </div>
+        <button class="task-delete" onclick="deleteTask(${task.id})">✕</button>
+      `;
+
+      if (isDone) doneList.prepend(el);
+      else todoList.appendChild(el);
+    });
+
+    document.getElementById('count-todo').textContent = cTodo;
+    document.getElementById('count-done').textContent = cDone;
+  }
+
+  // КАЛЕНДАРЬ С ПРОСЧЁТОМ ГРАФИКА 2/2
+  function changeMonth(dir) {
+    currentDate.setMonth(currentDate.getMonth() + dir);
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Название месяца
+    const monthNames = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+    document.getElementById('calendar-month-year').textContent = `${monthNames[month]} ${year}`;
+
+    const grid = document.getElementById('calendar-grid-cells');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(year, month, 1).getDay(); // 0 - ВС, 1 - ПН...
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Сдвиг для ПН = 1
+    let emptyCells = firstDay === 0 ? 6 : firstDay - 1;
+
+    for (let i = 0; i < emptyCells; i++) {
+      grid.innerHTML += `<div class="cal-cell empty"></div>`;
     }
-  });
 
-  function resizeAndSetImage(file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 700;
-        let width = img.width;
-        let height = img.height;
+    const todayStr = new Date().toISOString().split('T')[0];
 
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(Date.UTC(year, month, day));
+      const cellDateStr = cellDate.toISOString().split('T')[0];
+      
+      let isToday = cellDateStr === todayStr ? 'today' : '';
+      let cellHtml = `<div class="cal-cell ${isToday}"><div class="cal-date">${day}</div>`;
+
+      // Ищем задачи на этот день (учитывая 2/2)
+      tasks.forEach(task => {
+        let showTask = false;
+        
+        if (task.is_shift) {
+          // Логика 2/2
+          const tDate = new Date(task.task_date);
+          const utcTask = Date.UTC(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+          const utcCell = Date.UTC(year, month, day);
+          
+          const diffDays = Math.floor((utcCell - utcTask) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays >= 0) {
+            // График 2/2: цикл 4 дня. День 0 и 1 - работа. День 2 и 3 - выходной.
+            if (diffDays % 4 === 0 || diffDays % 4 === 1) showTask = true;
+          }
+        } else {
+          // Обычная задача (разовая)
+          if (task.task_date === cellDateStr) showTask = true;
         }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        if (showTask) {
+          const isDone = task.status === 'done' ? 'done' : '';
+          const isShift = task.is_shift ? 'shift' : '';
+          cellHtml += `<div class="cal-task ${isDone} ${isShift}" title="${task.title}">${task.title}</div>`;
+        }
+      });
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        document.getElementById('input-image-url').value = '';
-        updateImagePreview(dataUrl);
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function setQuestionMode(mode) {
-    currentQuestionMode = mode;
-    const textWrap = document.getElementById('q-text-wrapper');
-    const mathWrap = document.getElementById('q-math-wrapper');
-    const btnText = document.getElementById('btn-q-text');
-    const btnMath = document.getElementById('btn-q-math');
-
-    if (mode === 'text') {
-      textWrap.style.display = 'block';
-      mathWrap.style.display = 'none';
-      btnText.classList.add('active');
-      btnMath.classList.remove('active');
-    } else {
-      textWrap.style.display = 'none';
-      mathWrap.style.display = 'block';
-      btnText.classList.remove('active');
-      btnMath.classList.add('active');
+      cellHtml += `</div>`;
+      grid.innerHTML += cellHtml;
     }
   }
 
-  function insertQuestionSnippet(snippet) {
-    const textarea = document.getElementById('input-question');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
+  // ==========================================
+  // 3. ЛОГИКА ТРЕНАЖЁРА И БАЗЫ (без изменений)
+  // ==========================================
+  let deck = [];
+  let filteredDeck = [];
+  let currentIndex = 0;
+  let currentSubject = 'all';
+  let selectedTopics = new Set();
 
-    textarea.value = text.substring(0, start) + snippet + text.substring(end);
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
-  }
-
-  function insertQuestionMathTemplate(template) {
-    const mf = document.getElementById('q-math-field');
-    mf.executeCommand(['insert', template]);
-    mf.focus();
-  }
-
-  function setEditorAnswerMode(mode) {
-    currentEditorMode = mode;
-    const mathWrapper = document.getElementById('editor-math-wrapper');
-    const textWrapper = document.getElementById('editor-text-wrapper');
-    const btnMath = document.getElementById('btn-editor-math');
-    const btnText = document.getElementById('btn-editor-text');
-
-    if (mode === 'math') {
-      mathWrapper.style.display = 'block';
-      textWrapper.style.display = 'none';
-      btnMath.classList.add('active');
-      btnText.classList.remove('active');
-    } else {
-      mathWrapper.style.display = 'none';
-      textWrapper.style.display = 'block';
-      btnMath.classList.remove('active');
-      btnText.classList.add('active');
-    }
-  }
-
-  function autoSelectEditorMode(subj) {
-    if (subj === 'Русский язык') {
-      setEditorAnswerMode('text');
-    } else {
-      setEditorAnswerMode('math');
-    }
-  }
-
-  function insertEditorMathTemplate(template) {
-    const mf = document.getElementById('editor-math-field');
-    mf.executeCommand(['insert', template]);
-    mf.focus();
-  }
-
-  function setPracticeAnswerMode(mode) {
-    currentPracticeMode = mode;
-    const mathWrapper = document.getElementById('practice-math-wrapper');
-    const textWrapper = document.getElementById('practice-text-wrapper');
-    const btnMath = document.getElementById('btn-practice-math');
-    const btnText = document.getElementById('btn-practice-text');
-
-    if (mode === 'math') {
-      mathWrapper.style.display = 'block';
-      textWrapper.style.display = 'none';
-      btnMath.classList.add('active');
-      btnText.classList.remove('active');
-    } else {
-      mathWrapper.style.display = 'none';
-      textWrapper.style.display = 'block';
-      btnMath.classList.remove('active');
-      btnText.classList.add('active');
-    }
-  }
-
-  function insertPracticeMathTemplate(template) {
-    const mf = document.getElementById('practice-math-input');
-    if (mf) {
-      mf.executeCommand(['insert', template]);
-      mf.focus();
-    }
+  function switchTab(tabId) {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    
+    event.currentTarget.classList.add('active');
+    document.getElementById(`view-${tabId}`).classList.add('active');
+    
+    if(tabId === 'calendar') renderCalendar();
+    if(tabId === 'practice') filterDeck();
   }
 
   async function fetchDeck() {
     try {
-      const { data, error } = await supabaseClient
-        .from('cards')
-        .select('*')
-        .order('id', { ascending: false });
-
-      if (error) throw error;
+      const { data } = await supabaseClient.from('cards').select('*').order('id', { ascending: false });
       deck = data || [];
-      updateDeckCount();
       updateTopicsFilterUI(true);
       filterDeck();
       renderEditorList();
-    } catch (err) {
-      console.error('Ошибка загрузки данных:', err);
-    }
+    } catch (err) { console.error(err); }
   }
 
-  function updateDeckCount() {
-    document.getElementById('count').textContent = deck.length;
-  }
-
-  function setSubjectFilter(subject, el) {
-    currentSubject = subject;
+  function setSubjectFilter(subj, el) {
+    currentSubject = subj;
     document.querySelectorAll('.subject-pills .pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     updateTopicsFilterUI(true);
     filterDeck();
   }
 
-  function updateTopicsFilterUI(resetSelection = false) {
+  function updateTopicsFilterUI(reset = false) {
     const container = document.getElementById('topics-filter-list');
-    const availableCards = currentSubject === 'all' 
-      ? deck 
-      : deck.filter(c => c.subject === currentSubject);
+    const available = currentSubject === 'all' ? deck : deck.filter(c => c.subject === currentSubject);
+    
+    const counts = {};
+    available.forEach(c => { counts[c.topic] = (counts[c.topic] || 0) + 1; });
+    const unique = Object.keys(counts);
 
-    const topicCounts = {};
-    availableCards.forEach(c => {
-      if (c.topic) {
-        topicCounts[c.topic] = (topicCounts[c.topic] || 0) + 1;
-      }
-    });
-
-    const uniqueTopics = Object.keys(topicCounts);
-
-    if (resetSelection) {
-      selectedTopics = new Set(uniqueTopics);
-    } else {
-      selectedTopics = new Set(uniqueTopics.filter(t => selectedTopics.has(t)));
-    }
-
-    updateToggleBtnText(uniqueTopics);
+    if (reset) selectedTopics = new Set(unique);
 
     container.innerHTML = '';
-    if (uniqueTopics.length === 0) {
-      container.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem; padding:8px; text-align:center;">Нет доступных разделов</div>';
-      return;
-    }
-
-    uniqueTopics.forEach(topic => {
-      const item = document.createElement('div');
-      item.className = 'topic-list-item';
-      const isChecked = selectedTopics.has(topic);
-      
-      item.innerHTML = `
-        <label>
-          <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTopic('${topic.replace(/'/g, "\\'")}', this.checked)">
-          <span>${topic}</span>
-        </label>
-        <span class="topic-item-count">${topicCounts[topic]}</span>
-      `;
-      container.appendChild(item);
+    unique.forEach(t => {
+      const isChecked = selectedTopics.has(t) ? 'checked' : '';
+      container.innerHTML += `
+        <div class="topic-list-item">
+          <label><input type="checkbox" ${isChecked} onchange="toggleTopic('${t.replace(/'/g, "\\'")}', this.checked)"> ${t}</label>
+          <span class="topic-item-count">${counts[t]}</span>
+        </div>`;
     });
-  }
-
-  function updateToggleBtnText(uniqueTopics) {
-    const btn = document.getElementById('toggle-all-topics-btn');
-    if (!btn) return;
-    if (selectedTopics.size === uniqueTopics.length && uniqueTopics.length > 0) {
-      btn.textContent = 'Снять всё';
-    } else {
-      btn.textContent = 'Выбрать всё';
-    }
   }
 
   function toggleTopic(topic, isChecked) {
-    if (isChecked) selectedTopics.add(topic);
-    else selectedTopics.delete(topic);
-
-    const availableCards = currentSubject === 'all' 
-      ? deck 
-      : deck.filter(c => c.subject === currentSubject);
-    const uniqueTopics = [...new Set(availableCards.map(c => c.topic))];
-    updateToggleBtnText(uniqueTopics);
-
+    if (isChecked) selectedTopics.add(topic); else selectedTopics.delete(topic);
     filterDeck();
   }
 
   function toggleAllTopicsClick() {
-    const availableCards = currentSubject === 'all' 
-      ? deck 
-      : deck.filter(c => c.subject === currentSubject);
-    const uniqueTopics = [...new Set(availableCards.map(c => c.topic))];
-
-    if (selectedTopics.size === uniqueTopics.length) {
-      selectedTopics.clear();
-    } else {
-      selectedTopics = new Set(uniqueTopics);
-    }
-
+    const available = currentSubject === 'all' ? deck : deck.filter(c => c.subject === currentSubject);
+    const unique = [...new Set(available.map(c => c.topic))];
+    if (selectedTopics.size === unique.length) selectedTopics.clear();
+    else selectedTopics = new Set(unique);
     updateTopicsFilterUI(false);
     filterDeck();
   }
 
   function filterDeck() {
-    filteredDeck = deck.filter(card => {
-      const matchSubject = currentSubject === 'all' || card.subject === currentSubject;
-      const matchTopic = selectedTopics.has(card.topic);
-      return matchSubject && matchTopic;
-    });
-
+    filteredDeck = deck.filter(c => (currentSubject === 'all' || c.subject === currentSubject) && selectedTopics.has(c.topic));
     currentIndex = 0;
     renderPracticeCard();
   }
 
-  function switchTab(tab) {
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-
-    if (tab === 'practice') {
-      document.querySelector('.tabs button:first-child').classList.add('active');
-      document.getElementById('view-practice').classList.add('active');
-      filterDeck();
-    } else {
-      document.querySelector('.tabs button:last-child').classList.add('active');
-      document.getElementById('view-editor').classList.add('active');
-      renderEditorList();
-    }
+  function formatMath(text) {
+    if(!text) return '';
+    let t = text.replace(/\\text\{([^}]*)\}/g, '$1');
+    if (!/[а-яА-ЯёЁ]/.test(t) && !t.includes('$')) return `$$ ${t} $$`;
+    return t.replace(/(?<!\$)([a-zA-Z0-9_=\^\+\-\*\/\(\)\\]+)(?!\$)/g, (m) => /[а-я]/.test(m) ? m : `$${m}$`);
   }
 
-  function getBadgeClass(subj) {
-    if (subj === 'Физика') return 'badge-Физика';
-    if (subj === 'Математика') return 'badge-Математика';
-    return 'badge-Русский';
-  }
-
-  function isFormulaType(text) {
-    if (!text) return false;
-    if (text.startsWith('\\text{') && text.endsWith('}')) return false;
-    const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    return !hasCyrillic || text.includes('\\frac') || text.includes('\\sqrt') || text.includes('^') || text.includes('\\log');
-  }
-
-  function convertRawToFullLatex(rawText) {
-    if (!rawText) return '';
-    let text = rawText.trim();
-
-    if (text.startsWith('$$') && text.endsWith('$$')) text = text.slice(2, -2).trim();
-    else if (text.startsWith('$') && text.endsWith('$')) text = text.slice(1, -1).trim();
-
-    text = text.replace(/^([IVXLCDM]+)(?=[а-яА-ЯёЁa-zA-Z])/g, '$1 ');
-    text = text.replace(/\\sqrt(\d+)/g, '\\sqrt{$1}');
-
-    const tokens = text.split(/([а-яА-ЯёЁ][а-яА-ЯёЁ\s\.,!\?:;\(\)\-]*[а-яА-ЯёЁ\.,!\?:;\(\)\-]?)/g);
-
-    let latexParts = tokens.map(token => {
-      if (!token) return '';
-      if (/[а-яА-ЯёЁ]/.test(token)) {
-        let clean = token.replace(/\\text\{/g, '').replace(/\}/g, '');
-        return `\\text{${clean}}`;
-      }
-      return token;
-    });
-
-    return latexParts.join(' ');
-  }
-
-  function renderLatexToElement(elementId, rawContent) {
-    const el = document.getElementById(elementId);
+  function renderLatex(id, raw) {
+    const el = document.getElementById(id);
     if (!el || !window.katex) return;
-
-    const fullLatex = convertRawToFullLatex(rawContent);
-
-    try {
-      katex.render(fullLatex, el, {
-        displayMode: true,
-        throwOnError: false
-      });
-    } catch (err) {
-      el.textContent = rawContent;
-    }
+    try { katex.render(formatMath(raw), el, { displayMode: true, throwOnError: false }); } 
+    catch(e) { el.textContent = raw; }
   }
 
   function renderPracticeCard() {
-    const container = document.getElementById('practice-card-container');
-    if (filteredDeck.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <h3>Нет карточек по выбранным разделам</h3>
-          <p style="margin-top:8px">Выберите хотя бы один раздел в списке выше.</p>
-        </div>`;
-      return;
-    }
-
-    if (currentIndex >= filteredDeck.length) currentIndex = 0;
+    const cont = document.getElementById('practice-card-container');
+    if (!filteredDeck.length) return cont.innerHTML = '<div style="text-align:center; padding:40px; color:gray;">Нет карточек</div>';
+    
     const card = filteredDeck[currentIndex];
-    const defaultMode = isFormulaType(card.answer) ? 'math' : 'text';
-    currentPracticeMode = defaultMode;
-
-    container.innerHTML = `
+    cont.innerHTML = `
       <div class="flashcard">
-        <div>
-          <div class="meta-tags">
-            <span class="badge ${getBadgeClass(card.subject)}">${card.subject}</span>
-            <span class="topic-tag">${card.topic}</span>
-          </div>
-          
-          <div class="question-box">
-            <div id="practice-question-render" class="katex-rendered-block"></div>
-          </div>
-
-          ${card.image_url ? `
-            <div class="card-img-container">
-              <img src="${card.image_url}" class="card-img" alt="Чертёж к вопросу">
-            </div>
-          ` : ''}
-          
-          <div class="user-practice-input-section" id="practice-input-block">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:0.85rem; color:var(--text-muted); font-weight:500;">Ваш ответ:</span>
-              
-              <div class="input-mode-switcher">
-                <button type="button" class="mode-btn ${defaultMode === 'math' ? 'active' : ''}" id="btn-practice-math" onclick="setPracticeAnswerMode('math')">📐 Формула</button>
-                <button type="button" class="mode-btn ${defaultMode === 'text' ? 'active' : ''}" id="btn-practice-text" onclick="setPracticeAnswerMode('text')">📝 Текст</button>
-              </div>
-            </div>
-            
-            <div id="practice-math-wrapper" style="display:${defaultMode === 'math' ? 'block' : 'none'};">
-              <div class="math-toolbar">
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?^{#?}')">xⁿ Степень</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('#?_{#?}')">xₙ Индекс</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\frac{#?}{#?}')">½ Дробь</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sqrt{#?}')">√ Корень</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\log_{#?}(#?)')">log</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cdot')">· Умножить</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\sin(#?)')">sin</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\cos(#?)')">cos</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\pi')">π</button>
-                <button type="button" class="math-btn" onclick="insertPracticeMathTemplate('\\alpha')">α</button>
-              </div>
-              <math-field id="practice-math-input" math-mode-space="\;"></math-field>
-            </div>
-
-            <div id="practice-text-wrapper" style="display:${defaultMode === 'text' ? 'block' : 'none'};">
-              <textarea id="practice-text-input" rows="2" placeholder="Напишите ответ своими словами..."></textarea>
-            </div>
-          </div>
-
-          <div id="practice-feedback" class="result-feedback"></div>
-
-          <div class="answer-box" id="answer-content">
-            <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Правильный ответ:</div>
-            <div id="practice-answer-render" class="katex-rendered-block"></div>
-          </div>
-        </div>
-
+        <div class="meta-tags"><span class="badge ${card.subject === 'Физика' ? 'badge-Физика' : 'badge-Математика'}">${card.subject}</span><span class="topic-tag">${card.topic}</span></div>
+        <div class="question-box"><div id="pq"></div></div>
+        <div class="answer-box" id="ans-box"><div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Правильный ответ:</div><div id="pa"></div></div>
         <div class="flashcard-actions">
-          <button id="check-btn" class="btn-primary" style="flex:1" onclick="checkAnswer()">Проверить ответ</button>
-          <button id="skip-btn" class="btn-secondary" style="flex:1" onclick="skipOrOralAnswer()">Ответить устно / Пропустить</button>
-          <button style="flex:1; display:none" id="next-btn" class="btn-primary" onclick="nextCard()">Следующий вопрос →</button>
+          <button id="btn-show" class="btn-primary" style="flex:1" onclick="document.getElementById('ans-box').style.display='block'; this.style.display='none'; document.getElementById('btn-next').style.display='block';">Показать ответ</button>
+          <button id="btn-next" class="btn-primary" style="flex:1; display:none;" onclick="currentIndex = (currentIndex + 1) % filteredDeck.length; renderPracticeCard();">Дальше →</button>
         </div>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="color:var(--text-muted); font-size:0.875rem">Вопрос ${currentIndex + 1} из ${filteredDeck.length}</span>
-        <button style="font-size:0.875rem" onclick="shuffleDeck()">🔀 Перемешать</button>
-      </div>
+      <button style="font-size:0.85rem" onclick="filteredDeck.sort(()=>Math.random()-0.5); currentIndex=0; renderPracticeCard();">🔀 Перемешать</button>
     `;
-
-    renderLatexToElement('practice-question-render', card.question);
-    renderLatexToElement('practice-answer-render', card.answer);
+    setTimeout(() => { renderLatex('pq', card.question); renderLatex('pa', card.answer); }, 10);
   }
 
-  function cleanMathString(str) {
-    return (str || '')
-      .replace(/\s+/g, '')
-      .replace(/\\text\{([^}]*)\}/g, '$1')
-      .replace(/\\left/g, '')
-      .replace(/\\right/g, '')
-      .replace(/\\cdot/g, '')
-      .replace(/\*/g, '')
-      .replace(/[{}]/g, '')
-      .toLowerCase();
-  }
-
-  function checkAnswer() {
-    const card = filteredDeck[currentIndex];
-    let userAnswer = '';
-
-    if (currentPracticeMode === 'math') {
-      const mf = document.getElementById('practice-math-input');
-      userAnswer = mf ? mf.getValue() : '';
-    } else {
-      const tf = document.getElementById('practice-text-input');
-      userAnswer = tf ? tf.value : '';
-    }
-
-    const feedback = document.getElementById('practice-feedback');
-    feedback.style.display = 'block';
-
-    const cleanUser = cleanMathString(userAnswer);
-    const cleanTarget = cleanMathString(card.answer);
-
-    if (cleanUser.length > 0 && cleanUser === cleanTarget) {
-      feedback.className = 'result-feedback correct';
-      feedback.textContent = '🎉 Отлично! Ответ абсолютно верный!';
-    } else {
-      feedback.className = 'result-feedback info';
-      feedback.textContent = '📖 Сверьте ваш ответ с эталоном ниже:';
-    }
-
-    showAnswerView();
-  }
-
-  function showAnswerView() {
-    document.getElementById('answer-content').style.display = 'block';
-    document.getElementById('check-btn').style.display = 'none';
-    document.getElementById('skip-btn').style.display = 'none';
-    document.getElementById('next-btn').style.display = 'block';
-  }
-
-  function skipOrOralAnswer() {
-    showAnswerView();
-  }
-
-  function nextCard() {
-    currentIndex = (currentIndex + 1) % filteredDeck.length;
-    renderPracticeCard();
-  }
-
-  function shuffleDeck() {
-    for (let i = filteredDeck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [filteredDeck[i], filteredDeck[j]] = [filteredDeck[j], filteredDeck[i]];
-    }
-    currentIndex = 0;
-    renderPracticeCard();
-  }
-
-  function startEditing(id) {
-    const card = deck.find(c => c.id === id);
-    if (!card) return;
-
-    editingCardId = id;
-    document.getElementById('input-subject').value = card.subject;
-    document.getElementById('input-topic').value = card.topic;
-    
-    setQuestionMode('text');
-    document.getElementById('input-question').value = card.question;
-    
-    if (card.image_url) {
-      document.getElementById('input-image-url').value = card.image_url;
-      updateImagePreview(card.image_url);
-    } else {
-      removeImage();
-    }
-
-    let ans = card.answer;
-    const isPureFormula = isFormulaType(ans);
-    
-    if (isPureFormula) {
-      setEditorAnswerMode('math');
-      document.getElementById('editor-math-field').setValue(ans);
-    } else {
-      setEditorAnswerMode('text');
-      if (ans.startsWith('\\text{') && ans.endsWith('}')) {
-        ans = ans.slice(6, -1);
-      }
-      document.getElementById('editor-text-field').value = ans;
-    }
-
-    const saveBtn = document.getElementById('save-btn');
-    saveBtn.textContent = '💾 Обновить карточку';
-    document.getElementById('cancel-edit-btn').style.display = 'inline-block';
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEditing() {
-    editingCardId = null;
-    document.getElementById('add-form').reset();
-    document.getElementById('editor-math-field').setValue('');
-    document.getElementById('editor-text-field').value = '';
-    document.getElementById('q-math-field').setValue('');
-    removeImage();
-    const saveBtn = document.getElementById('save-btn');
-    saveBtn.textContent = '+ Сохранить в облако Supabase';
-    document.getElementById('cancel-edit-btn').style.display = 'none';
-  }
-
-  async function saveCardForm(e) {
-    e.preventDefault();
-    const btn = document.getElementById('save-btn');
-    const subject = document.getElementById('input-subject').value;
-    const topic = document.getElementById('input-topic').value.trim();
-    
-    let question = '';
-    if (currentQuestionMode === 'math') {
-      question = document.getElementById('q-math-field').getValue().trim();
-    } else {
-      question = document.getElementById('input-question').value.trim();
-    }
-
-    let answer = '';
-    if (currentEditorMode === 'math') {
-      answer = document.getElementById('editor-math-field').getValue().trim();
-    } else {
-      answer = document.getElementById('editor-text-field').value.trim();
-    }
-
-    const image_url = currentUploadedImageBase64 || document.getElementById('input-image-url').value.trim() || null;
-
-    if (!subject || !topic || !question || !answer) {
-      alert('Пожалуйста, заполните все обязательные поля!');
-      return;
-    }
-
-    btn.disabled = true;
-
-    try {
-      if (editingCardId) {
-        btn.textContent = 'Обновление в облаке...';
-        const { data, error } = await supabaseClient
-          .from('cards')
-          .update({ subject, topic, question, answer, image_url })
-          .eq('id', editingCardId)
-          .select();
-
-        if (error) throw error;
-
-        const idx = deck.findIndex(c => c.id === editingCardId);
-        if (idx !== -1 && data && data[0]) {
-          deck[idx] = data[0];
-        }
-        cancelEditing();
-      } else {
-        btn.textContent = 'Сохранение в облако...';
-        const { data, error } = await supabaseClient
-          .from('cards')
-          .insert([{ subject, topic, question, answer, image_url }])
-          .select();
-
-        if (error) throw error;
-
-        if (data && data[0]) {
-          deck.unshift(data[0]);
-        }
-        document.getElementById('input-question').value = '';
-        document.getElementById('q-math-field').setValue('');
-        document.getElementById('editor-math-field').setValue('');
-        document.getElementById('editor-text-field').value = '';
-        removeImage();
-        document.getElementById('input-topic').focus();
-      }
-
-      updateDeckCount();
-      updateTopicsFilterUI(false);
-      filterDeck();
-      renderEditorList();
-    } catch (err) {
-      alert('Ошибка при сохранении: ' + err.message);
-    } finally {
-      btn.disabled = false;
-      if (!editingCardId) {
-        btn.textContent = '+ Сохранить в облако Supabase';
-      }
-    }
-  }
-
-  async function deleteCard(id) {
-    if (!confirm('Удалить эту карточку?')) return;
-
-    try {
-      const { error } = await supabaseClient
-        .from('cards')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      if (editingCardId === id) cancelEditing();
-
-      deck = deck.filter(item => item.id !== id);
-      updateDeckCount();
-      updateTopicsFilterUI(false);
-      filterDeck();
-      renderEditorList();
-    } catch (err) {
-      alert('Ошибка при удалении: ' + err.message);
-    }
-  }
-
-  function renderEditorList() {
-    const list = document.getElementById('card-list');
-    list.innerHTML = '';
-
-    deck.forEach((item, index) => {
-      const el = document.createElement('div');
-      el.className = 'list-item';
-      const qId = `list-q-${item.id || index}`;
-      const aId = `list-a-${item.id || index}`;
-
-      el.innerHTML = `
-        <div class="item-content">
-          <div class="meta-tags">
-            <span class="badge ${getBadgeClass(item.subject)}">${item.subject}</span>
-            <span class="topic-tag">${item.topic}</span>
-          </div>
-          <div class="item-question">
-            <div id="${qId}" class="katex-rendered-block"></div>
-          </div>
-          ${item.image_url ? `
-            <div style="margin: 6px 0;">
-              <img src="${item.image_url}" style="max-height: 80px; border-radius: 4px; border: 1px solid var(--border);" alt="Чертёж">
-            </div>
-          ` : ''}
-          <div class="item-answer">
-            <div id="${aId}" class="katex-rendered-block"></div>
-          </div>
-        </div>
-        <div class="item-actions">
-          <button class="edit-btn" onclick="startEditing(${item.id})" title="Редактировать">✎ Редактировать</button>
-          <button class="delete-btn" onclick="deleteCard(${item.id})" title="Удалить">✕</button>
-        </div>
-      `;
-      list.appendChild(el);
-
-      setTimeout(() => {
-        renderLatexToElement(qId, item.question);
-        renderLatexToElement(aId, item.answer);
-      }, 0);
-    });
-  }
-
+  // ==========================================
+  // 4. ЗАПУСК
+  // ==========================================
   window.addEventListener('DOMContentLoaded', () => {
+    fetchTasks();
     fetchDeck();
   });
+
 </script>
 </body>
 </html>
