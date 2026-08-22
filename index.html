@@ -68,7 +68,6 @@
     .brand-logo svg { width: 22px; height: 22px; }
     h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
     
-    /* Табы (Навигация) */
     .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
     @media(min-width: 768px) { .tabs { width: auto; } }
     .tabs button {
@@ -115,8 +114,15 @@
       .task-inputs-row { grid-template-columns: 1fr auto auto auto auto; }
     }
     
-    .task-form input[type="text"], .task-form input[type="date"], .task-form select { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; width: 100%; }
+    .task-form input[type="text"], .task-form input[type="date"], .task-form input[type="time"], .task-form select { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; width: 100%; }
     .task-form select { cursor: pointer; }
+
+    .time-settings-row {
+      display: flex; gap: 12px; align-items: center; margin-top: 10px; flex-wrap: wrap;
+      background: rgba(0,0,0,0.15); padding: 8px 12px; border-radius: 8px; border: 1px dashed var(--border);
+    }
+    .time-settings-row label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-muted); }
+    .time-settings-row input[type="time"] { width: auto; }
 
     .weekdays-selector { display: none; gap: 8px; margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; }
     .weekdays-selector label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.85rem; }
@@ -157,12 +163,41 @@
     
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
     .task-badge-date { background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; }
+    .task-badge-time { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; }
     .task-badge-shift { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
     
     .task-actions-btn { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
     .task-action-btn { background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-size: 0.9rem; width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
     .task-action-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
     .task-action-btn.del:hover { background: var(--danger); border-color: var(--danger); }
+
+    /* СПИСОК ПОВТОРЯЮЩИХСЯ ЗАДАЧ (СВОРАЧИВАЕМЫЙ ИНКУБАТОР) */
+    .incubator-panel {
+      margin-top: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      backdrop-filter: blur(10px);
+    }
+    .incubator-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .incubator-body {
+      margin-top: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .incubator-body.open {
+      display: flex;
+    }
 
     /* =========================================
        КАЛЕНДАРЬ
@@ -342,6 +377,11 @@
         <button class="btn-primary" id="task-submit-btn" style="padding: 9px 18px;" onclick="saveTaskForm()">Добавить</button>
         <button class="btn-secondary" id="task-cancel-btn" style="padding: 9px 18px; display:none;" onclick="cancelEditingTask()">Отмена</button>
       </div>
+
+      <div class="time-settings-row">
+        <label>⏰ Время появления: <input type="time" id="task-time-appear" value="00:00"></label>
+        <label>⌛ Время дедлайна: <input type="time" id="task-time-due" value="23:59"></label>
+      </div>
       
       <div class="weekdays-selector" id="weekdays-selector">
         <label><input type="checkbox" value="1" class="weekday-chk"> Пн</label>
@@ -379,6 +419,15 @@
         <h3>Выполнено <span class="task-count" id="count-done">0</span></h3>
         <div class="task-list-container" id="done-list"></div>
       </div>
+    </div>
+
+    <!-- СВОРАЧИВАЕМЫЙ СПИСОК ПОВТОРЯЮЩИХСЯ ЗАДАЧ (ИНКУБАТОР) -->
+    <div class="incubator-panel">
+      <div class="incubator-header" onclick="toggleIncubator()">
+        <span>🔁 Ожидают возрождения по графику (<span id="count-incubator">0</span>)</span>
+        <span id="incubator-arrow">▼</span>
+      </div>
+      <div class="incubator-body" id="incubator-list"></div>
     </div>
   </section>
 
@@ -528,7 +577,7 @@
 
 <script>
   // ==========================================
-  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И НАСТРОЙКИ
+  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
   // ==========================================
   const SUPABASE_URL = 'https://lhymatecnqucjdijmgww.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoeW1hdGVjbnF1Y2pkaWptZ3d3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzcyNTgsImV4cCI6MjEwMjU1MzI1OH0.IqlSb0aitLZ5mQUXlVaAfrDp0lwuaJlf2bIbVEb7Ffw';
@@ -793,11 +842,18 @@
 
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & ПОЛНОЦЕННЫЙ DRAG & DROP СОРТИРОВКИ
+  // ТРЕКЕР ЗАДАЧ, ВРЕМЯ И ИНКУБАТОР
   // ==========================================
   let editingTaskId = null;
   let currentTaskCover = null;
   let draggedTaskId = null;
+
+  function toggleIncubator() {
+    const body = document.getElementById('incubator-list');
+    const arrow = document.getElementById('incubator-arrow');
+    body.classList.toggle('open');
+    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+  }
 
   function handleRepeatChange(val) {
     document.getElementById('weekdays-selector').style.display = (val === 'weekly') ? 'flex' : 'none';
@@ -834,11 +890,39 @@
 
   function clearTaskCover() { currentTaskCover = null; document.getElementById('task-cover-preview').style.display = 'none'; }
 
+  // Проверка задач на наступление времени появления
+  function checkIncubatorAwakening() {
+    const today = new Date();
+    const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
+    const curTimeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+
+    let changed = false;
+    tasks.forEach(task => {
+      if (task.is_incubating) {
+        // Если дата задачи уже наступила (или прошла) и время появления пришло
+        if (task.task_date < todayStr || (task.task_date === todayStr && (task.time_appear || '00:00') <= curTimeStr)) {
+          task.is_incubating = false;
+          task.status = 'todo';
+          changed = true;
+          supabaseClient.from('tasks').update({ is_incubating: false, status: 'todo' }).eq('id', task.id);
+        }
+      }
+    });
+
+    if (changed) {
+      renderKanban();
+      renderCalendar();
+    }
+  }
+
   async function fetchTasks() {
     try {
       const { data, error } = await supabaseClient.from('tasks').select('*').order('position', { ascending: true }).order('id', { ascending: false });
       if (error) throw error;
-      tasks = data || []; renderKanban(); renderCalendar();
+      tasks = data || [];
+      checkIncubatorAwakening();
+      renderKanban(); 
+      renderCalendar();
     } catch (err) { console.error('Ошибка загрузки задач:', err); }
   }
 
@@ -848,6 +932,8 @@
     editingTaskId = id;
     document.getElementById('task-title').value = task.title;
     document.getElementById('task-date').value = task.task_date;
+    document.getElementById('task-time-appear').value = task.time_appear || '00:00';
+    document.getElementById('task-time-due').value = task.time_due || '23:59';
     
     const repeatSelect = document.getElementById('task-repeat');
     if (task.repeat_type) {
@@ -888,6 +974,8 @@
     editingTaskId = null;
     document.getElementById('task-title').value = '';
     document.getElementById('task-date').valueAsDate = new Date();
+    document.getElementById('task-time-appear').value = '00:00';
+    document.getElementById('task-time-due').value = '23:59';
     document.getElementById('task-repeat').value = 'none';
     handleRepeatChange('none');
     document.querySelectorAll('.weekday-chk').forEach(chk => chk.checked = false);
@@ -900,6 +988,8 @@
   async function saveTaskForm() {
     const titleStr = document.getElementById('task-title').value.trim();
     const dateStr = document.getElementById('task-date').value;
+    const timeAppearStr = document.getElementById('task-time-appear').value || '00:00';
+    const timeDueStr = document.getElementById('task-time-due').value || '23:59';
     let repeatType = document.getElementById('task-repeat').value;
     
     if (repeatType === 'custom_shift') {
@@ -920,9 +1010,17 @@
     const isShiftFlag = repeatType === '2/2' || repeatType === '3/3' || repeatType === '4/4' || repeatType.startsWith('shift_');
 
     const taskPayload = { 
-        title: titleStr, task_date: dateStr, repeat_type: repeatType,
-        repeat_days: repeatDays, is_shift: isShiftFlag, cover: currentTaskCover,
-        position: tasks.length 
+        title: titleStr, 
+        task_date: dateStr, 
+        time_appear: timeAppearStr,
+        time_due: timeDueStr,
+        repeat_type: repeatType,
+        repeat_days: repeatDays, 
+        is_shift: isShiftFlag, 
+        cover: currentTaskCover,
+        position: tasks.length,
+        is_incubating: false,
+        completed_dates: ''
     };
 
     try {
@@ -939,18 +1037,109 @@
         cancelEditingTask(); 
       }
       renderKanban(); renderCalendar();
-    } catch (err) { alert('Ошибка сохранения задачи!'); }
+    } catch (err) { alert('Ошибка сохранения! Убедись, что выполнил SQL-запрос для времени!'); }
   }
 
+  function getNextOccurrenceDate(task, fromDateStr) {
+    const parts = fromDateStr.split('-');
+    let cur = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    
+    for (let i = 1; i <= 365; i++) {
+      cur.setDate(cur.getDate() + 1);
+      const y = cur.getFullYear();
+      const m = cur.getMonth();
+      const d = cur.getDate();
+      const checkStr = getLocalDateString(y, m, d);
+      const checkDayOfWeek = cur.getDay().toString();
+
+      const isShiftType = task.repeat_type === '2/2' || task.repeat_type === '3/3' || task.repeat_type === '4/4' || (task.repeat_type && task.repeat_type.startsWith('shift_')) || (task.is_shift && !task.repeat_type);
+
+      if (isShiftType) {
+        let workDays = 2, restDays = 2;
+        if (task.repeat_type === '3/3') { workDays = 3; restDays = 3; }
+        else if (task.repeat_type === '4/4') { workDays = 4; restDays = 4; }
+        else if (task.repeat_type && task.repeat_type.startsWith('shift_')) {
+          const p = task.repeat_type.replace('shift_', '').split('_');
+          workDays = parseInt(p[0]) || 2;
+          restDays = parseInt(p[1]) || 2;
+        }
+
+        const tParts = task.task_date.split('-');
+        const utcTask = Date.UTC(parseInt(tParts[0], 10), parseInt(tParts[1], 10) - 1, parseInt(tParts[2], 10));
+        const utcCell = Date.UTC(y, m, d);
+        const diffDays = Math.floor((utcCell - utcTask) / (1000 * 60 * 60 * 24));
+        const cycle = workDays + restDays;
+
+        if (diffDays >= 0 && (diffDays % cycle) < workDays) {
+          return checkStr;
+        }
+      } else if (task.repeat_type === 'weekly') {
+        if (task.repeat_days && task.repeat_days.includes(checkDayOfWeek)) {
+          return checkStr;
+        }
+      }
+    }
+    return fromDateStr;
+  }
+
+  // ==========================================
+  // ВЫПОЛНЕНИЕ ЗАДАЧИ: ПЕРЕХОД В DONE + ОТПРАВКА КОПИИ В ИНКУБАТОР
+  // ==========================================
   async function toggleTaskStatus(id, currentStatus) {
-    const newStatus = currentStatus === 'todo' ? 'done' : 'todo';
-    try {
-      const { error } = await supabaseClient.from('tasks').update({ status: newStatus }).eq('id', id);
-      if (error) throw error;
-      const task = tasks.find(t => t.id === id);
-      if (task) task.status = newStatus;
-      renderKanban(); renderCalendar();
-    } catch (err) { alert('Ошибка обновления: ' + err.message); }
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const isRepeating = (task.repeat_type && task.repeat_type !== 'none') || task.is_shift;
+
+    if (isRepeating && currentStatus === 'todo') {
+      // 1. Текущая карточка помечается выполненной на сегодня и уходит в DONE
+      task.status = 'done';
+      let compDates = (task.completed_dates || '').split(',').filter(Boolean);
+      if (!compDates.includes(task.task_date)) compDates.push(task.task_date);
+      task.completed_dates = compDates.join(',');
+
+      // 2. Рассчитываем дату следующего появления
+      const nextDate = getNextOccurrenceDate(task, task.task_date);
+
+      // 3. Создаем её копию, которая будет ждать в Инкубаторе
+      const nextTaskPayload = {
+        title: task.title,
+        task_date: nextDate,
+        time_appear: task.time_appear || '00:00',
+        time_due: task.time_due || '23:59',
+        repeat_type: task.repeat_type,
+        repeat_days: task.repeat_days,
+        is_shift: task.is_shift,
+        cover: task.cover,
+        position: tasks.length + 1,
+        is_incubating: true, // Сидит в инкубаторе до своего времени
+        status: 'todo',
+        completed_dates: task.completed_dates
+      };
+
+      // Сохраняем в память и сразу рендерим
+      renderKanban();
+      renderCalendar();
+
+      try {
+        await supabaseClient.from('tasks').update({ status: 'done', completed_dates: task.completed_dates }).eq('id', id);
+        const { data } = await supabaseClient.from('tasks').insert([nextTaskPayload]).select();
+        if (data && data[0]) tasks.push(data[0]);
+        renderKanban();
+        renderCalendar();
+      } catch(err) { console.error('Ошибка:', err); }
+
+    } else {
+      // Обычная разовая задача
+      const newStatus = currentStatus === 'todo' ? 'done' : 'todo';
+      task.status = newStatus;
+      renderKanban();
+      renderCalendar();
+
+      try {
+        await supabaseClient.from('tasks').update({ status: newStatus }).eq('id', id);
+      } catch(err) { console.error('Ошибка обновления:', err); }
+    }
   }
 
   async function deleteTask(id) {
@@ -963,7 +1152,7 @@
   }
 
   // ==========================================
-  // ТОЧНАЯ СОРТИРОВКА И ПЕРЕМЕЩЕНИЕ КАРТОЧЕК
+  // DRAG AND DROP
   // ==========================================
   function handleDragStart(e, id) {
     draggedTaskId = id;
@@ -1015,7 +1204,6 @@
     e.currentTarget.classList.remove('drag-over');
     if (!draggedTaskId) return;
 
-    // Считываем обновленный порядок карточек из DOM
     const todoIds = [...document.querySelectorAll('#todo-list .task-card')].map(el => parseInt(el.dataset.id, 10));
     const doneIds = [...document.querySelectorAll('#done-list .task-card')].map(el => parseInt(el.dataset.id, 10));
 
@@ -1040,87 +1228,115 @@
       }
     });
 
+    tasks.forEach(t => {
+      if (t.is_incubating) updatedTasks.push(t);
+    });
+
     tasks = updatedTasks;
     renderKanban();
     renderCalendar();
 
-    // Сохраняем новые позиции и статусы в облаке
     try {
       const updates = tasks.map(t => ({
         id: t.id,
         title: t.title,
         task_date: t.task_date,
+        time_appear: t.time_appear,
+        time_due: t.time_due,
         repeat_type: t.repeat_type,
         repeat_days: t.repeat_days,
         is_shift: t.is_shift,
         cover: t.cover,
         status: t.status,
-        position: t.position
+        position: t.position,
+        is_incubating: t.is_incubating,
+        completed_dates: t.completed_dates
       }));
       await supabaseClient.from('tasks').upsert(updates);
-    } catch(err) { console.error('Ошибка сохранения порядка:', err); }
+    } catch(err) { console.error('Ошибка:', err); }
 
     draggedTaskId = null;
   }
 
-  function renderKanban() {
-    const todoList = document.getElementById('todo-list');
-    const doneList = document.getElementById('done-list');
-    todoList.innerHTML = ''; doneList.innerHTML = '';
-    
-    let cTodo = 0, cDone = 0;
+  function renderTaskCardHTML(task, isDone) {
+    const parts = task.task_date.split('-');
+    const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 
-    tasks.forEach(task => {
-      const isDone = task.status === 'done';
-      if (isDone) cDone++; else cTodo++;
+    let badge = '';
+    if (task.repeat_type === '2/2' || (task.is_shift && !task.repeat_type)) badge = `<span class="task-badge-shift">🔁 2/2</span>`;
+    else if (task.repeat_type === '3/3') badge = `<span class="task-badge-shift">🔁 3/3</span>`;
+    else if (task.repeat_type === '4/4') badge = `<span class="task-badge-shift">🔁 4/4</span>`;
+    else if (task.repeat_type && task.repeat_type.startsWith('shift_')) {
+      const p = task.repeat_type.replace('shift_', '').split('_');
+      badge = `<span class="task-badge-shift">🔁 ${p[0]}/${p[1]}</span>`;
+    }
+    else if (task.repeat_type === 'weekly') badge = `<span class="task-badge-shift">🔁 По дням</span>`;
 
-      const parts = task.task_date.split('-');
-      const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
-      const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    let timeBadge = '';
+    if (task.time_appear || task.time_due) {
+      timeBadge = `<span class="task-badge-time">⏰ ${task.time_appear || '00:00'} - ${task.time_due || '23:59'}</span>`;
+    }
 
-      let badge = '';
-      if (task.repeat_type === '2/2' || (task.is_shift && !task.repeat_type)) badge = `<span class="task-badge-shift">🔁 2/2</span>`;
-      else if (task.repeat_type === '3/3') badge = `<span class="task-badge-shift">🔁 3/3</span>`;
-      else if (task.repeat_type === '4/4') badge = `<span class="task-badge-shift">🔁 4/4</span>`;
-      else if (task.repeat_type && task.repeat_type.startsWith('shift_')) {
-        const p = task.repeat_type.replace('shift_', '').split('_');
-        badge = `<span class="task-badge-shift">🔁 ${p[0]}/${p[1]}</span>`;
-      }
-      else if (task.repeat_type === 'weekly') badge = `<span class="task-badge-shift">🔁 По дням</span>`;
+    let coverHtml = '';
+    if (task.cover) {
+      if (task.cover.startsWith('#')) coverHtml = `<div class="task-cover" style="background-color: ${task.cover};"></div>`;
+      else coverHtml = `<div class="task-cover" style="background-image: url(${task.cover});"></div>`;
+    }
 
-      let coverHtml = '';
-      if (task.cover) {
-        if (task.cover.startsWith('#')) coverHtml = `<div class="task-cover" style="background-color: ${task.cover};"></div>`;
-        else coverHtml = `<div class="task-cover" style="background-image: url(${task.cover});"></div>`;
-      }
-
-      const el = document.createElement('div');
-      el.className = `task-card ${isDone ? 'done' : ''}`;
-      el.dataset.id = task.id;
-      el.draggable = true;
-      el.ondragstart = (e) => handleDragStart(e, task.id);
-      el.ondragend = handleDragEnd;
-
-      el.innerHTML = `
+    return `
+      <div class="task-card ${isDone ? 'done' : ''}" data-id="${task.id}" draggable="true" ondragstart="handleDragStart(event, ${task.id})" ondragend="handleDragEnd(event)">
         ${coverHtml}
         <div class="task-card-body">
           <input type="checkbox" class="task-checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskStatus(${task.id}, '${task.status}')">
           <div class="task-content">
             <div class="task-title">${task.title}</div>
-            <div class="task-meta"><span class="task-badge-date">📅 ${dateString}</span>${badge}</div>
+            <div class="task-meta">
+              <span class="task-badge-date">📅 ${dateString}</span>
+              ${timeBadge}
+              ${badge}
+            </div>
           </div>
           <div class="task-actions-btn">
             <button class="task-action-btn" onclick="startEditingTask(${task.id})" title="Редактировать">✎</button>
             <button class="task-action-btn del" onclick="deleteTask(${task.id})" title="Удалить">✕</button>
           </div>
         </div>
-      `;
-      if (isDone) doneList.appendChild(el); 
-      else todoList.appendChild(el);
+      </div>
+    `;
+  }
+
+  function renderKanban() {
+    const todoList = document.getElementById('todo-list');
+    const doneList = document.getElementById('done-list');
+    const incubatorList = document.getElementById('incubator-list');
+    
+    todoList.innerHTML = ''; 
+    doneList.innerHTML = '';
+    incubatorList.innerHTML = '';
+    
+    let cTodo = 0, cDone = 0, cInc = 0;
+
+    tasks.forEach(task => {
+      if (task.is_incubating) {
+        // Ожидает в инкубаторе
+        cInc++;
+        incubatorList.innerHTML += renderTaskCardHTML(task, false);
+      } else {
+        const isDone = task.status === 'done';
+        if (isDone) {
+          cDone++;
+          doneList.innerHTML += renderTaskCardHTML(task, true);
+        } else {
+          cTodo++;
+          todoList.innerHTML += renderTaskCardHTML(task, false);
+        }
+      }
     });
 
     document.getElementById('count-todo').textContent = cTodo;
     document.getElementById('count-done').textContent = cDone;
+    document.getElementById('count-incubator').textContent = cInc;
   }
 
   // ==========================================
@@ -1167,6 +1383,7 @@
 
       tasks.forEach(task => {
         let showTask = false;
+        let isCompletedOnThisDay = false;
         
         const isShiftType = task.repeat_type === '2/2' || task.repeat_type === '3/3' || task.repeat_type === '4/4' || (task.repeat_type && task.repeat_type.startsWith('shift_')) || (task.is_shift && !task.repeat_type);
 
@@ -1193,14 +1410,29 @@
           if (diffDays >= 0 && (diffDays % cycle) < workDays) {
             showTask = true;
           }
+          const compDates = (task.completed_dates || '').split(',').filter(Boolean);
+          if (compDates.includes(cellDateStr)) {
+            showTask = true;
+            isCompletedOnThisDay = true;
+          }
         } else if (task.repeat_type === 'weekly') {
-          if (cellDateStr >= task.task_date && task.repeat_days.includes(cellDayOfWeek)) showTask = true;
+          if (cellDateStr >= task.task_date && task.repeat_days.includes(cellDayOfWeek)) {
+            showTask = true;
+          }
+          const compDates = (task.completed_dates || '').split(',').filter(Boolean);
+          if (compDates.includes(cellDateStr)) {
+            showTask = true;
+            isCompletedOnThisDay = true;
+          }
         } else {
-          if (task.task_date === cellDateStr) showTask = true;
+          if (task.task_date === cellDateStr) {
+            showTask = true;
+            if (task.status === 'done') isCompletedOnThisDay = true;
+          }
         }
 
         if (showTask) {
-          const isDone = task.status === 'done' ? 'done' : '';
+          const isDone = isCompletedOnThisDay ? 'done' : '';
           const isShift = isShiftType ? 'shift' : '';
           let styleStr = '';
           if (task.cover && task.cover.startsWith('#')) styleStr = `style="border-left-color: ${task.cover};"`;
@@ -1570,6 +1802,8 @@
     fetchTasks();
     fetchDeck();
     loadPersistedShimejis();
+    // Проверяем пробуждение задач каждую минуту
+    setInterval(checkIncubatorAwakening, 60000);
   });
 </script>
 </body>
