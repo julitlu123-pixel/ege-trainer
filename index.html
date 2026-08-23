@@ -138,6 +138,19 @@
     .task-color-picker::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 6px; }
     .task-cover-preview { width: 42px; height: 24px; border-radius: 4px; border: 1px solid var(--border); display: none; background-size: cover; background-position: center; margin-left: auto; }
 
+    .kanban-toolbar {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+    }
+    .sort-toggle-group {
+      display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .sort-btn {
+      font-size: 0.8rem; padding: 4px 10px; background: transparent; border: none; color: var(--text-muted); border-radius: 6px; cursor: pointer;
+    }
+    .sort-btn.active {
+      background: var(--accent); color: #fff; font-weight: 600;
+    }
+
     .kanban-board { display: flex; gap: 16px; align-items: flex-start; flex-direction: column; }
     @media(min-width: 768px) {
       .kanban-board { flex-direction: row; }
@@ -173,6 +186,7 @@
     .task-card.done .task-title { text-decoration: line-through; color: var(--text-muted); opacity: 0.6; }
     
     .task-meta { display: flex; gap: 6px; font-size: 0.75rem; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
+    .task-badge-pos { background: rgba(255,255,255,0.12); padding: 2px 6px; border-radius: 4px; font-weight: 600; }
     .task-badge-date { background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; }
     .task-badge-time { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; }
     .task-badge-shift { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
@@ -412,6 +426,15 @@
       </div>
     </div>
 
+    <!-- ТУЛБАР СОРТИРОВКИ ЗАДАЧ -->
+    <div class="kanban-toolbar">
+      <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Сортировка задач:</span>
+      <div class="sort-toggle-group">
+        <button type="button" class="sort-btn active" id="sort-btn-manual" onclick="setTaskSortMode('manual')">🖐️ По порядку (ручной)</button>
+        <button type="button" class="sort-btn" id="sort-btn-date" onclick="setTaskSortMode('date')">📅 По дате дедлайна</button>
+      </div>
+    </div>
+
     <div class="kanban-board">
       <div class="kanban-col" id="col-todo" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'todo')">
         <h3>В планах <span class="task-count" id="count-todo">0</span></h3>
@@ -600,6 +623,7 @@
   let filteredEditorDeck = [];
   let currentIndex = 0;
   let editingCardId = null;
+  let taskSortMode = localStorage.getItem('task_sort_mode') || 'manual'; // 'manual' или 'date'
   
   // ==========================================
   // НАВИГАЦИЯ И ФОН
@@ -853,13 +877,20 @@
     alert('Память очищена!');
   }
 
-
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & ИНКУБАТОР
+  // ТРЕКЕР ЗАДАЧ & СОРТИРОВКА
   // ==========================================
   let editingTaskId = null;
   let currentTaskCover = null;
   let draggedTaskId = null;
+
+  function setTaskSortMode(mode) {
+    taskSortMode = mode;
+    localStorage.setItem('task_sort_mode', mode);
+    document.getElementById('sort-btn-manual').classList.toggle('active', mode === 'manual');
+    document.getElementById('sort-btn-date').classList.toggle('active', mode === 'date');
+    renderKanban();
+  }
 
   function toggleIncubator() {
     const body = document.getElementById('incubator-list');
@@ -1159,7 +1190,7 @@
   }
 
   // ==========================================
-  // DRAG AND DROP
+  // DRAG AND DROP & ФИКСАЦИЯ ПОЗИЦИЙ
   // ==========================================
   function handleDragStart(e, id) {
     draggedTaskId = id;
@@ -1265,7 +1296,7 @@
     draggedTaskId = null;
   }
 
-  function renderTaskCardHTML(task, isDone, isIncubating = false) {
+  function renderTaskCardHTML(task, isDone, isIncubating = false, displayIndex = null) {
     const parts = task.task_date.split('-');
     const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
     const dateString = dObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1285,6 +1316,11 @@
       timeBadge = `<span class="task-badge-time">⏰ ${task.time_appear || '00:00'} - ${task.time_due || '23:59'}</span>`;
     }
 
+    let posBadge = '';
+    if (displayIndex !== null) {
+      posBadge = `<span class="task-badge-pos">#${displayIndex}</span>`;
+    }
+
     let coverHtml = '';
     if (task.cover) {
       if (task.cover.startsWith('#')) coverHtml = `<div class="task-cover" style="background-color: ${task.cover};"></div>`;
@@ -1301,6 +1337,7 @@
           <div class="task-content">
             <div class="task-title">${task.title}</div>
             <div class="task-meta">
+              ${posBadge}
               <span class="task-badge-date">📅 ${dateString}</span>
               ${timeBadge}
               ${badge}
@@ -1326,18 +1363,26 @@
     
     let cTodo = 0, cDone = 0, cInc = 0;
 
-    tasks.forEach(task => {
+    // Сортировка перед выводом
+    let sortedTasks = [...tasks];
+    if (taskSortMode === 'date') {
+      sortedTasks.sort((a, b) => new Date(a.task_date) - new Date(b.task_date));
+    } else {
+      sortedTasks.sort((a, b) => (a.position ?? 9999) - (b.position ?? 9999));
+    }
+
+    sortedTasks.forEach(task => {
       if (task.is_incubating) {
         cInc++;
-        incubatorList.innerHTML += renderTaskCardHTML(task, false, true);
+        incubatorList.innerHTML += renderTaskCardHTML(task, false, true, null);
       } else {
         const isDone = task.status === 'done';
         if (isDone) {
           cDone++;
-          doneList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, true, false)));
+          doneList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, true, false, cDone)));
         } else {
           cTodo++;
-          todoList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false)));
+          todoList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false, cTodo)));
         }
       }
     });
@@ -1368,10 +1413,8 @@
       const today = new Date();
       const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
 
-      // Оставляем только те задачи, которые сейчас есть в todo, done или инкубаторе
       const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
       
-      // Сбрасываем старую строку completed_dates у активных задач, если они сейчас стоят не в done
       validTasks.forEach(t => {
         if (t.status !== 'done') {
           t.completed_dates = '';
@@ -1875,7 +1918,7 @@
 
   function renderEditorList() {
     const list = document.getElementById('card-list'); list.innerHTML = '';
-    if (filteredEditorDeck.length === 0) return list.innerHTML = '<div class="empty-state">Нет карточек по выбранным разделам</div>';
+    if (filteredEditorDeck.length === 0) return list.innerHTML = '<div class="empty-state" style="padding:20px; text-align:center; color:var(--text-muted);">Нет карточек по выбранным разделам</div>';
 
     filteredEditorDeck.forEach((item, index) => {
       const el = document.createElement('div'); el.className = 'list-item';
@@ -1909,6 +1952,7 @@
     fetchTasks();
     fetchDeck();
     loadPersistedShimejis();
+    setTaskSortMode(taskSortMode);
     setInterval(checkIncubatorAwakening, 60000);
   });
 </script>
