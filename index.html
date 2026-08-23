@@ -160,7 +160,13 @@
       .kanban-board { grid-template-columns: repeat(3, 1fr); }
     }
     .kanban-col { background: var(--trello-col); border: 1px solid var(--border); border-radius: 12px; padding: 14px; backdrop-filter: blur(5px); display: flex; flex-direction: column; }
-    .kanban-col h3 { font-size: 0.98rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .kanban-col-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer; user-select: none;
+    }
+    .kanban-col-header h3 { font-size: 0.98rem; display: flex; align-items: center; gap: 8px; }
+    .col-collapse-arrow { font-size: 0.8rem; color: var(--text-muted); }
+
     .task-count { background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; }
 
     .task-list-container { 
@@ -172,7 +178,12 @@
       flex-direction: column; 
       gap: 10px; 
       padding-right: 4px;
+      transition: all 0.2s ease;
     }
+    .task-list-container.collapsed {
+      display: none;
+    }
+
     .task-list-container::-webkit-scrollbar { width: 4px; }
     .task-list-container::-webkit-scrollbar-track { background: transparent; }
     .task-list-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
@@ -187,7 +198,7 @@
       cursor: grab; 
       user-select: none; 
       flex-shrink: 0;
-      touch-action: none;
+      touch-action: pan-y; /* Разрешает вертикальный скролл экрана */
     }
     .task-card:active { cursor: grabbing; }
 
@@ -394,7 +405,7 @@
   </section>
 
   <!-- =========================================
-       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ (3 КОЛОНКИ)
+       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ (3 КОЛОНКИ С ПАМЯТЬЮ СВОРАЧИВАНИЯ)
        ========================================= -->
   <section id="view-tracker" class="view active">
     <div class="task-form">
@@ -457,15 +468,24 @@
     <!-- 3 ОСНОВНЫЕ КОЛОНКИ -->
     <div class="kanban-board">
       <div class="kanban-col" id="col-today">
-        <h3>🔥 На сегодня <span class="task-count" id="count-today">0</span></h3>
+        <div class="kanban-col-header" onclick="toggleColumn('today')">
+          <h3>🔥 На сегодня <span class="task-count" id="count-today">0</span></h3>
+          <span class="col-collapse-arrow" id="arrow-today">▼</span>
+        </div>
         <div class="task-list-container" id="today-list"></div>
       </div>
       <div class="kanban-col" id="col-todo">
-        <h3>📋 В планах <span class="task-count" id="count-todo">0</span></h3>
+        <div class="kanban-col-header" onclick="toggleColumn('todo')">
+          <h3>📋 В планах <span class="task-count" id="count-todo">0</span></h3>
+          <span class="col-collapse-arrow" id="arrow-todo">▼</span>
+        </div>
         <div class="task-list-container" id="todo-list"></div>
       </div>
       <div class="kanban-col" id="col-done">
-        <h3>✅ Выполнено <span class="task-count" id="count-done">0</span></h3>
+        <div class="kanban-col-header" onclick="toggleColumn('done')">
+          <h3>✅ Выполнено <span class="task-count" id="count-done">0</span></h3>
+          <span class="col-collapse-arrow" id="arrow-done">▼</span>
+        </div>
         <div class="task-list-container" id="done-list"></div>
       </div>
     </div>
@@ -906,8 +926,44 @@
   }
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & SORTABLEJS (3 КОЛОНКИ)
+  // ТРЕКЕР ЗАДАЧ & SORTABLEJS (3 КОЛОНКИ + ПАМЯТЬ СВОРАЧИВАНИЯ)
   // ==========================================
+  function toggleColumn(colName) {
+    const listEl = document.getElementById(`${colName}-list`);
+    const arrowEl = document.getElementById(`arrow-${colName}`);
+    const isCollapsed = listEl.classList.toggle('collapsed');
+    arrowEl.textContent = isCollapsed ? '▶' : '▼';
+    localStorage.setItem(`col_collapsed_${colName}`, isCollapsed ? '1' : '0');
+  }
+
+  function loadColumnStates() {
+    ['today', 'todo', 'done'].forEach(colName => {
+      const isCollapsed = localStorage.getItem(`col_collapsed_${colName}`) === '1';
+      const listEl = document.getElementById(`${colName}-list`);
+      const arrowEl = document.getElementById(`arrow-${colName}`);
+      if (listEl && arrowEl) {
+        listEl.classList.toggle('collapsed', isCollapsed);
+        arrowEl.textContent = isCollapsed ? '▶' : '▼';
+      }
+    });
+
+    const isIncCollapsed = localStorage.getItem('col_collapsed_incubator') === '0'; // по дефолту инкубатор закрыт
+    const incBody = document.getElementById('incubator-list');
+    const incArrow = document.getElementById('incubator-arrow');
+    if (incBody && incArrow) {
+      incBody.classList.toggle('open', isIncCollapsed);
+      incArrow.textContent = isIncCollapsed ? '▲' : '▼';
+    }
+  }
+
+  function toggleIncubator() {
+    const body = document.getElementById('incubator-list');
+    const arrow = document.getElementById('incubator-arrow');
+    const isOpen = body.classList.toggle('open');
+    arrow.textContent = isOpen ? '▲' : '▼';
+    localStorage.setItem('col_collapsed_incubator', isOpen ? '0' : '1');
+  }
+
   function initSortable() {
     const todayListEl = document.getElementById('today-list');
     const todoListEl = document.getElementById('todo-list');
@@ -944,7 +1000,6 @@
 
     let pos = 0;
     const updates = [];
-
     const todayDateStr = getLocalDateString(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
     todayCards.forEach(card => {
@@ -953,7 +1008,6 @@
       if (t) {
         t.status = 'todo';
         t.position = pos++;
-        // Если перетащили в "На сегодня", обновляем дату на текущую, если она была другой
         if (t.task_date > todayDateStr) {
           t.task_date = todayDateStr;
         }
@@ -1010,14 +1064,12 @@
     document.getElementById('sort-btn-date').classList.toggle('active', mode === 'date');
 
     if (mode === 'date') {
-      // Сортируем по дедлайну (дата + время)
       tasks.sort((a, b) => {
         const timeA = `${a.task_date}T${a.time_due || '23:59'}`;
         const timeB = `${b.task_date}T${b.time_due || '23:59'}`;
         return timeA.localeCompare(timeB);
       });
 
-      // Перезаписываем позиции по новому порядку
       tasks.forEach((t, i) => t.position = i);
       
       try {
@@ -1030,13 +1082,6 @@
     }
 
     renderKanban();
-  }
-
-  function toggleIncubator() {
-    const body = document.getElementById('incubator-list');
-    const arrow = document.getElementById('incubator-arrow');
-    body.classList.toggle('open');
-    arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
   }
 
   function handleRepeatChange(val) {
@@ -1443,7 +1488,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ
+  // КАЛЕНДАРЬ & ЧИСТКА ПО ВЫПОЛНЕНИЯМ
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
@@ -1999,6 +2044,7 @@
   // ==========================================
   window.addEventListener('DOMContentLoaded', () => {
     loadBackground();
+    loadColumnStates();
     fetchTasks();
     fetchDeck();
     loadPersistedShimejis();
