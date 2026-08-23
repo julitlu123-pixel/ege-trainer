@@ -187,11 +187,9 @@
       cursor: grab; 
       user-select: none; 
       flex-shrink: 0;
-      touch-action: none;
     }
     .task-card:active { cursor: grabbing; }
 
-    /* Стили для SortableJS */
     .sortable-ghost { opacity: 0.35; transform: scale(0.98); background: rgba(99, 102, 241, 0.25); }
     .sortable-chosen { box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
     .sortable-drag { opacity: 0.95; cursor: grabbing; }
@@ -912,6 +910,9 @@
     const options = {
       group: 'tasksGroup',
       animation: 180,
+      delay: 250, // 250мс долгое нажатие для телефонов
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       dragClass: 'sortable-drag',
@@ -952,7 +953,6 @@
       }
     });
 
-    // Обновляем бейджи с номерами позиций на лету
     updateBadgesInPlace();
     renderCalendar();
 
