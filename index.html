@@ -71,6 +71,7 @@
     .brand-logo svg { width: 22px; height: 22px; }
     h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
     
+    /* Табы (Навигация) */
     .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
     @media(min-width: 768px) { .tabs { width: auto; } }
     .tabs button {
@@ -477,7 +478,7 @@
       </div>
     </div>
 
-    <!-- ИНКУБАТОР (4-й блок) -->
+    <!-- ИНКУБАТОР -->
     <div class="incubator-panel">
       <div class="incubator-header" onclick="toggleIncubator()">
         <span>🔁 Ожидают возрождения по графику (<span id="count-incubator">0</span>)</span>
@@ -648,6 +649,8 @@
   let filteredEditorDeck = [];
   let currentIndex = 0;
   let editingCardId = null;
+  let editingTaskId = null;
+  let currentTaskCover = null;
   let taskSortMode = localStorage.getItem('task_sort_mode') || 'manual';
   
   let currentQuestionMode = 'text';
@@ -1624,11 +1627,8 @@
   }
 
   // ==========================================
-  // БАЗА КАРТОЧЕК: ОБЩАЯ ЛОГИКА И ПАРСИНГ
+  // БАЗА КАРТОЧЕК
   // ==========================================
-  let pracSubject = 'all'; let pracTopics = new Set();
-  let edSubject = 'all';   let edTopics = new Set();
-
   function renderQuestion(elementId, rawContent) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -1772,7 +1772,6 @@
     renderPracticeCard();
   }
 
-  let currentPracticeMode = 'math';
   function setPracticeAnswerMode(mode) {
     currentPracticeMode = mode;
     document.getElementById('practice-math-wrapper').style.display = mode === 'math' ? 'block' : 'none';
