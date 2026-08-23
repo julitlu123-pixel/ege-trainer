@@ -18,7 +18,7 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- SortableJS Library -->
+  <!-- SortableJS -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
   <style>
@@ -164,7 +164,7 @@
     .task-count { background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; }
 
     .task-list-container { 
-      min-height: 220px;
+      min-height: 220px; 
       max-height: 520px; 
       overflow-y: auto; 
       overflow-x: hidden; 
@@ -186,14 +186,14 @@
       overflow: hidden; 
       cursor: grab; 
       user-select: none; 
-      flex-shrink: 0; 
+      flex-shrink: 0;
       touch-action: none;
     }
     .task-card:active { cursor: grabbing; }
-    
-    /* SortableJS classes */
-    .sortable-ghost { opacity: 0.3; transform: scale(0.98); background: rgba(99, 102, 241, 0.2); }
-    .sortable-chosen { box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+
+    /* Стили для SortableJS */
+    .sortable-ghost { opacity: 0.35; transform: scale(0.98); background: rgba(99, 102, 241, 0.25); }
+    .sortable-chosen { box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
     .sortable-drag { opacity: 0.95; cursor: grabbing; }
 
     .task-cover { width: 100%; height: 45px; background-size: cover; background-position: center; border-bottom: 1px solid var(--border); }
@@ -900,7 +900,7 @@
   }
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & ИНИЦИАЛИЗАЦИЯ SORTABLEJS
+  // ТРЕКЕР ЗАДАЧ & SORTABLEJS
   // ==========================================
   function initSortable() {
     const todoListEl = document.getElementById('todo-list');
@@ -911,11 +911,11 @@
 
     const options = {
       group: 'tasksGroup',
-      animation: 200,
+      animation: 180,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       dragClass: 'sortable-drag',
-      disabled: taskSortMode === 'date', // отключаем ручной драг если режим "по дате"
+      disabled: taskSortMode === 'date',
       onEnd: function() {
         saveSortableOrder();
       }
@@ -938,7 +938,7 @@
       if (t) {
         t.status = 'todo';
         t.position = pos++;
-        updates.push(t);
+        updates.push({ id: t.id, status: 'todo', position: t.position });
       }
     });
 
@@ -948,33 +948,34 @@
       if (t) {
         t.status = 'done';
         t.position = pos++;
-        updates.push(t);
+        updates.push({ id: t.id, status: 'done', position: t.position });
       }
     });
 
-    renderKanban();
+    // Обновляем бейджи с номерами позиций на лету
+    updateBadgesInPlace();
     renderCalendar();
 
     try {
-      const payload = updates.map(t => ({
-        id: t.id,
-        title: t.title,
-        task_date: t.task_date,
-        time_appear: t.time_appear,
-        time_due: t.time_due,
-        repeat_type: t.repeat_type,
-        repeat_days: t.repeat_days,
-        is_shift: t.is_shift,
-        cover: t.cover,
-        status: t.status,
-        position: t.position,
-        is_incubating: t.is_incubating || false,
-        completed_dates: t.completed_dates || ''
-      }));
-      await supabaseClient.from('tasks').upsert(payload);
+      await Promise.all(updates.map(u => 
+        supabaseClient.from('tasks').update({ status: u.status, position: u.position }).eq('id', u.id)
+      ));
     } catch(err) {
       console.error('Ошибка сохранения порядка:', err);
     }
+  }
+
+  function updateBadgesInPlace() {
+    const todoCards = document.querySelectorAll('#todo-list .task-card');
+    todoCards.forEach((card, i) => {
+      const badge = card.querySelector('.task-badge-pos');
+      if (badge) badge.textContent = `#${i + 1}`;
+    });
+    const doneCards = document.querySelectorAll('#done-list .task-card');
+    doneCards.forEach((card, i) => {
+      const badge = card.querySelector('.task-badge-pos');
+      if (badge) badge.textContent = `#${i + 1}`;
+    });
   }
 
   function setTaskSortMode(mode) {
@@ -1054,7 +1055,10 @@
     try {
       const { data, error } = await supabaseClient.from('tasks').select('*').order('position', { ascending: true }).order('id', { ascending: false });
       if (error) throw error;
-      tasks = data || [];
+      tasks = (data || []).map((t, idx) => ({
+        ...t,
+        position: (t.position !== null && t.position !== undefined) ? Number(t.position) : idx
+      }));
       checkIncubatorAwakening();
       renderKanban(); 
       renderCalendar();
@@ -1353,7 +1357,7 @@
     if (taskSortMode === 'date') {
       sortedTasks.sort((a, b) => new Date(a.task_date) - new Date(b.task_date));
     } else {
-      sortedTasks.sort((a, b) => (a.position ?? 9999) - (b.position ?? 9999));
+      sortedTasks.sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
     }
 
     sortedTasks.forEach(task => {
@@ -1376,7 +1380,6 @@
     document.getElementById('count-done').textContent = cDone;
     document.getElementById('count-incubator').textContent = cInc;
 
-    // Переинициализируем SortableJS после каждой перерисовки DOM
     initSortable();
   }
 
