@@ -53,7 +53,7 @@
       background: rgba(11, 17, 32, 0.75); z-index: -1;
     }
 
-    .container { width: 100%; max-width: 1100px; position: relative; z-index: 1; }
+    .container { width: 100%; max-width: 1200px; position: relative; z-index: 1; }
     
     header {
       display: flex; justify-content: space-between; align-items: center;
@@ -155,17 +155,17 @@
       background: var(--accent); color: #fff; font-weight: 600;
     }
 
-    .kanban-board { display: flex; gap: 16px; align-items: flex-start; flex-direction: column; }
-    @media(min-width: 768px) {
-      .kanban-board { flex-direction: row; }
+    .kanban-board { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media(min-width: 900px) {
+      .kanban-board { grid-template-columns: repeat(3, 1fr); }
     }
-    .kanban-col { flex: 1; width: 100%; background: var(--trello-col); border: 1px solid var(--border); border-radius: 12px; padding: 14px; backdrop-filter: blur(5px); }
-    .kanban-col h3 { font-size: 1rem; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .kanban-col { background: var(--trello-col); border: 1px solid var(--border); border-radius: 12px; padding: 14px; backdrop-filter: blur(5px); display: flex; flex-direction: column; }
+    .kanban-col h3 { font-size: 0.98rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     .task-count { background: rgba(0,0,0,0.4); padding: 2px 7px; border-radius: 12px; font-size: 0.75rem; }
 
     .task-list-container { 
       min-height: 220px; 
-      max-height: 520px; 
+      max-height: 540px; 
       overflow-y: auto; 
       overflow-x: hidden; 
       display: flex; 
@@ -187,6 +187,7 @@
       cursor: grab; 
       user-select: none; 
       flex-shrink: 0;
+      touch-action: none;
     }
     .task-card:active { cursor: grabbing; }
 
@@ -393,7 +394,7 @@
   </section>
 
   <!-- =========================================
-       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ
+       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ (3 КОЛОНКИ)
        ========================================= -->
   <section id="view-tracker" class="view active">
     <div class="task-form">
@@ -453,18 +454,23 @@
       </div>
     </div>
 
+    <!-- 3 ОСНОВНЫЕ КОЛОНКИ -->
     <div class="kanban-board">
+      <div class="kanban-col" id="col-today">
+        <h3>🔥 На сегодня <span class="task-count" id="count-today">0</span></h3>
+        <div class="task-list-container" id="today-list"></div>
+      </div>
       <div class="kanban-col" id="col-todo">
-        <h3>В планах <span class="task-count" id="count-todo">0</span></h3>
+        <h3>📋 В планах <span class="task-count" id="count-todo">0</span></h3>
         <div class="task-list-container" id="todo-list"></div>
       </div>
       <div class="kanban-col" id="col-done">
-        <h3>Выполнено <span class="task-count" id="count-done">0</span></h3>
+        <h3>✅ Выполнено <span class="task-count" id="count-done">0</span></h3>
         <div class="task-list-container" id="done-list"></div>
       </div>
     </div>
 
-    <!-- ИНКУБАТОР -->
+    <!-- ИНКУБАТОР (4-й блок) -->
     <div class="incubator-panel">
       <div class="incubator-header" onclick="toggleIncubator()">
         <span>🔁 Ожидают возрождения по графику (<span id="count-incubator">0</span>)</span>
@@ -642,6 +648,8 @@
   let currentIndex = 0;
   let editingCardId = null;
   let taskSortMode = localStorage.getItem('task_sort_mode') || 'manual';
+  
+  let sortableToday = null;
   let sortableTodo = null;
   let sortableDone = null;
   
@@ -898,19 +906,21 @@
   }
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & SORTABLEJS
+  // ТРЕКЕР ЗАДАЧ & SORTABLEJS (3 КОЛОНКИ)
   // ==========================================
   function initSortable() {
+    const todayListEl = document.getElementById('today-list');
     const todoListEl = document.getElementById('todo-list');
     const doneListEl = document.getElementById('done-list');
 
+    if (sortableToday) sortableToday.destroy();
     if (sortableTodo) sortableTodo.destroy();
     if (sortableDone) sortableDone.destroy();
 
     const options = {
       group: 'tasksGroup',
       animation: 180,
-      delay: 250, // 250мс долгое нажатие для телефонов
+      delay: 250,
       delayOnTouchOnly: true,
       touchStartThreshold: 5,
       ghostClass: 'sortable-ghost',
@@ -922,16 +932,34 @@
       }
     };
 
-    sortableTodo = new Sortable(todoListEl, options);
-    sortableDone = new Sortable(doneListEl, options);
+    if (todayListEl) sortableToday = new Sortable(todayListEl, options);
+    if (todoListEl) sortableTodo = new Sortable(todoListEl, options);
+    if (doneListEl) sortableDone = new Sortable(doneListEl, options);
   }
 
   async function saveSortableOrder() {
+    const todayCards = document.querySelectorAll('#today-list .task-card');
     const todoCards = document.querySelectorAll('#todo-list .task-card');
     const doneCards = document.querySelectorAll('#done-list .task-card');
 
     let pos = 0;
     const updates = [];
+
+    const todayDateStr = getLocalDateString(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+    todayCards.forEach(card => {
+      const id = parseInt(card.dataset.id, 10);
+      const t = tasks.find(item => item.id === id);
+      if (t) {
+        t.status = 'todo';
+        t.position = pos++;
+        // Если перетащили в "На сегодня", обновляем дату на текущую, если она была другой
+        if (t.task_date > todayDateStr) {
+          t.task_date = todayDateStr;
+        }
+        updates.push({ id: t.id, status: 'todo', position: t.position, task_date: t.task_date });
+      }
+    });
 
     todoCards.forEach(card => {
       const id = parseInt(card.dataset.id, 10);
@@ -939,7 +967,7 @@
       if (t) {
         t.status = 'todo';
         t.position = pos++;
-        updates.push({ id: t.id, status: 'todo', position: t.position });
+        updates.push({ id: t.id, status: 'todo', position: t.position, task_date: t.task_date });
       }
     });
 
@@ -949,7 +977,7 @@
       if (t) {
         t.status = 'done';
         t.position = pos++;
-        updates.push({ id: t.id, status: 'done', position: t.position });
+        updates.push({ id: t.id, status: 'done', position: t.position, task_date: t.task_date });
       }
     });
 
@@ -958,7 +986,7 @@
 
     try {
       await Promise.all(updates.map(u => 
-        supabaseClient.from('tasks').update({ status: u.status, position: u.position }).eq('id', u.id)
+        supabaseClient.from('tasks').update({ status: u.status, position: u.position, task_date: u.task_date }).eq('id', u.id)
       ));
     } catch(err) {
       console.error('Ошибка сохранения порядка:', err);
@@ -966,23 +994,41 @@
   }
 
   function updateBadgesInPlace() {
-    const todoCards = document.querySelectorAll('#todo-list .task-card');
-    todoCards.forEach((card, i) => {
-      const badge = card.querySelector('.task-badge-pos');
-      if (badge) badge.textContent = `#${i + 1}`;
-    });
-    const doneCards = document.querySelectorAll('#done-list .task-card');
-    doneCards.forEach((card, i) => {
-      const badge = card.querySelector('.task-badge-pos');
-      if (badge) badge.textContent = `#${i + 1}`;
+    let num = 1;
+    ['#today-list', '#todo-list', '#done-list'].forEach(sel => {
+      document.querySelectorAll(`${sel} .task-card`).forEach(card => {
+        const badge = card.querySelector('.task-badge-pos');
+        if (badge) badge.textContent = `#${num++}`;
+      });
     });
   }
 
-  function setTaskSortMode(mode) {
+  async function setTaskSortMode(mode) {
     taskSortMode = mode;
     localStorage.setItem('task_sort_mode', mode);
     document.getElementById('sort-btn-manual').classList.toggle('active', mode === 'manual');
     document.getElementById('sort-btn-date').classList.toggle('active', mode === 'date');
+
+    if (mode === 'date') {
+      // Сортируем по дедлайну (дата + время)
+      tasks.sort((a, b) => {
+        const timeA = `${a.task_date}T${a.time_due || '23:59'}`;
+        const timeB = `${b.task_date}T${b.time_due || '23:59'}`;
+        return timeA.localeCompare(timeB);
+      });
+
+      // Перезаписываем позиции по новому порядку
+      tasks.forEach((t, i) => t.position = i);
+      
+      try {
+        await Promise.all(tasks.map(t => 
+          supabaseClient.from('tasks').update({ position: t.position }).eq('id', t.id)
+        ));
+      } catch(err) {
+        console.error('Ошибка сохранения сортировки по дате:', err);
+      }
+    }
+
     renderKanban();
   }
 
@@ -1343,19 +1389,28 @@
   }
 
   function renderKanban() {
+    const todayList = document.getElementById('today-list');
     const todoList = document.getElementById('todo-list');
     const doneList = document.getElementById('done-list');
     const incubatorList = document.getElementById('incubator-list');
     
+    todayList.innerHTML = '';
     todoList.innerHTML = ''; 
     doneList.innerHTML = '';
     incubatorList.innerHTML = '';
     
-    let cTodo = 0, cDone = 0, cInc = 0;
+    let cToday = 0, cTodo = 0, cDone = 0, cInc = 0;
+    let globalIndex = 1;
+
+    const todayStr = getLocalDateString(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
     let sortedTasks = [...tasks];
     if (taskSortMode === 'date') {
-      sortedTasks.sort((a, b) => new Date(a.task_date) - new Date(b.task_date));
+      sortedTasks.sort((a, b) => {
+        const timeA = `${a.task_date}T${a.time_due || '23:59'}`;
+        const timeB = `${b.task_date}T${b.time_due || '23:59'}`;
+        return timeA.localeCompare(timeB);
+      });
     } else {
       sortedTasks.sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
     }
@@ -1368,14 +1423,18 @@
         const isDone = task.status === 'done';
         if (isDone) {
           cDone++;
-          doneList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, true, false, cDone)));
+          doneList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, true, false, globalIndex++)));
+        } else if (task.task_date <= todayStr) {
+          cToday++;
+          todayList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false, globalIndex++)));
         } else {
           cTodo++;
-          todoList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false, cTodo)));
+          todoList.appendChild(document.createRange().createContextualFragment(renderTaskCardHTML(task, false, false, globalIndex++)));
         }
       }
     });
 
+    document.getElementById('count-today').textContent = cToday;
     document.getElementById('count-todo').textContent = cTodo;
     document.getElementById('count-done').textContent = cDone;
     document.getElementById('count-incubator').textContent = cInc;
@@ -1384,7 +1443,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ & ЧИСТКА ПО ВЫПОЛНЕНИЯМ
+  // КАЛЕНДАРЬ
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
