@@ -71,7 +71,6 @@
     .brand-logo svg { width: 22px; height: 22px; }
     h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
     
-    /* Табы (Навигация) */
     .tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
     @media(min-width: 768px) { .tabs { width: auto; } }
     .tabs button {
@@ -88,9 +87,7 @@
     button.btn-secondary { background: var(--btn-secondary); color: #fff; padding: 10px 16px; font-weight: 600; font-size: 0.95rem; cursor: pointer; border-radius: 8px; border: none; transition: 0.2s; }
     button.btn-secondary:hover { background: #475569; }
 
-    /* =========================================
-       НАСТРОЙКИ
-       ========================================= */
+    /* НАСТРОЙКИ */
     .settings-panel {
       background: var(--card-bg); border: 1px solid var(--border);
       border-radius: 12px; padding: 18px; margin-bottom: 20px; backdrop-filter: blur(10px);
@@ -109,9 +106,7 @@
     }
     .shimeji-entity:active { cursor: grabbing; }
 
-    /* =========================================
-       ТРЕКЕР ЗАДАЧ
-       ========================================= */
+    /* ТРЕКЕР ЗАДАЧ */
     .task-form { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 20px; backdrop-filter: blur(10px); }
     .task-inputs-row { display: grid; gap: 10px; grid-template-columns: 1fr; align-items: center; }
     @media(min-width: 768px) {
@@ -198,7 +193,7 @@
       cursor: grab; 
       user-select: none; 
       flex-shrink: 0;
-      touch-action: pan-y; /* Разрешает вертикальный скролл экрана */
+      touch-action: pan-y;
     }
     .task-card:active { cursor: grabbing; }
 
@@ -240,9 +235,7 @@
     }
     .incubator-body.open { display: flex; }
 
-    /* =========================================
-       КАЛЕНДАРЬ
-       ========================================= */
+    /* КАЛЕНДАРЬ */
     .calendar-header-bar { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--border); padding: 12px 18px; border-radius: 12px; margin-bottom: 12px; backdrop-filter: blur(10px); flex-wrap: wrap; gap: 10px; }
     .calendar-header-bar button { padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white; cursor: pointer; font-size: 0.85rem; }
     .calendar-header-bar button:hover { background: var(--accent); border-color: var(--accent); }
@@ -275,9 +268,7 @@
     .cal-task.done { border-left-color: var(--success); text-decoration: line-through; opacity: 0.6; }
     .cal-task.shift { border-left-color: var(--accent); background: rgba(99, 102, 241, 0.2); }
 
-    /* =========================================
-       ОБЩИЕ ЭЛЕМЕНТЫ ТРЕНАЖЁРА И РЕДАКТОРА
-       ========================================= */
+    /* ТРЕНАЖЁР И РЕДАКТОР */
     .filter-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; backdrop-filter: blur(10px); }
     .subject-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
     .pill { padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; cursor: pointer; border: 1px solid var(--border); background: rgba(0,0,0,0.3); }
@@ -357,9 +348,7 @@
     </div>
   </header>
 
-  <!-- =========================================
-       ВКЛАДКА 0: НАСТРОЙКИ
-       ========================================= -->
+  <!-- ВКЛАДКА 0: НАСТРОЙКИ -->
   <section id="view-settings" class="view">
     <div class="settings-panel">
       <h2>🖼️ Оформление сайта</h2>
@@ -404,9 +393,7 @@
     </div>
   </section>
 
-  <!-- =========================================
-       ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ (3 КОЛОНКИ С ПАМЯТЬЮ СВОРАЧИВАНИЯ)
-       ========================================= -->
+  <!-- ВКЛАДКА 1: ТРЕКЕР ЗАДАЧ -->
   <section id="view-tracker" class="view active">
     <div class="task-form">
       <div class="task-inputs-row">
@@ -500,9 +487,7 @@
     </div>
   </section>
 
-  <!-- =========================================
-       ВКЛАДКА 2: КАЛЕНДАРЬ
-       ========================================= -->
+  <!-- ВКЛАДКА 2: КАЛЕНДАРЬ -->
   <section id="view-calendar" class="view">
     <div class="calendar-header-bar">
       <div style="display:flex; gap:8px; align-items:center;">
@@ -520,9 +505,7 @@
     <div class="calendar-grid" id="calendar-grid-cells"></div>
   </section>
 
-  <!-- =========================================
-       ВКЛАДКА 3: ТРЕНАЖЁР
-       ========================================= -->
+  <!-- ВКЛАДКА 3: ТРЕНАЖЁР -->
   <section id="view-practice" class="view">
     <div class="filter-panel">
       <div class="subject-pills">
@@ -543,9 +526,7 @@
     <div id="practice-card-container"></div>
   </section>
 
-  <!-- =========================================
-       ВКЛАДКА 4: БАЗА ВОПРОСОВ
-       ========================================= -->
+  <!-- ВКЛАДКА 4: БАЗА ВОПРОСОВ -->
   <section id="view-editor" class="view">
     <div class="filter-panel" style="margin-bottom: 20px;">
       <div class="subject-pills">
@@ -596,7 +577,7 @@
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\sqrt{x}')">√</button>
             <button type="button" class="math-btn" onclick="insertQuestionSnippet('\\alpha')">α</button>
           </div>
-          <textarea id="input-question" rows="2" placeholder="Напиши вопрос..." required></textarea>
+          <textarea id="input-question" rows="2" placeholder="Напиши вопрос..."></textarea>
         </div>
         <div id="q-math-wrapper" style="display:none;">
           <math-field id="q-math-field" math-mode-space="\;"></math-field>
@@ -669,6 +650,10 @@
   let editingCardId = null;
   let taskSortMode = localStorage.getItem('task_sort_mode') || 'manual';
   
+  let currentQuestionMode = 'text';
+  let currentEditorMode = 'math';
+  let currentUploadedImageBase64 = '';
+
   let sortableToday = null;
   let sortableTodo = null;
   let sortableDone = null;
@@ -799,7 +784,7 @@
 
     activeShimejis.forEach(sh => {
       if (sh === draggedShimeji) {
-        // Перетаскивание
+        // Dragging
       } else if (sh.state === 'fall') {
         sh.vy += 0.4; 
         sh.x += sh.vx;
@@ -926,7 +911,7 @@
   }
 
   // ==========================================
-  // ТРЕКЕР ЗАДАЧ & SORTABLEJS (3 КОЛОНКИ + ПАМЯТЬ СВОРАЧИВАНИЯ)
+  // ТРЕКЕР ЗАДАЧ & SORTABLEJS
   // ==========================================
   function toggleColumn(colName) {
     const listEl = document.getElementById(`${colName}-list`);
@@ -947,7 +932,7 @@
       }
     });
 
-    const isIncCollapsed = localStorage.getItem('col_collapsed_incubator') === '0'; // по дефолту инкубатор закрыт
+    const isIncCollapsed = localStorage.getItem('col_collapsed_incubator') === '0';
     const incBody = document.getElementById('incubator-list');
     const incArrow = document.getElementById('incubator-arrow');
     if (incBody && incArrow) {
@@ -1153,7 +1138,9 @@
       checkIncubatorAwakening();
       renderKanban(); 
       renderCalendar();
-    } catch (err) { console.error('Ошибка загрузки задач:', err); }
+    } catch (err) { 
+      console.error('Ошибка загрузки задач:', err); 
+    }
   }
 
   function startEditingTask(id) {
@@ -1267,7 +1254,9 @@
         cancelEditingTask(); 
       }
       renderKanban(); renderCalendar();
-    } catch (err) { alert('Ошибка сохранения задачи!'); }
+    } catch (err) { 
+      alert('Ошибка сохранения задачи: ' + err.message); 
+    }
   }
 
   function getNextOccurrenceDate(task, fromDateStr) {
@@ -1488,7 +1477,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ & ЧИСТКА ПО ВЫПОЛНЕНИЯМ
+  // КАЛЕНДАРЬ
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
@@ -1644,7 +1633,7 @@
     const el = document.getElementById(elementId);
     if (!el) return;
     
-    let text = rawContent.trim();
+    let text = (rawContent || '').trim();
     if (!/[а-яА-ЯёЁ]/.test(text) && !text.includes('$')) {
         text = `$$ ${text} $$`;
     } else {
@@ -1676,7 +1665,7 @@
   }
 
   function forceAnswerLatex(rawText) {
-    let t = rawText.trim();
+    let t = (rawText || '').trim();
     if (t.startsWith('$$') && t.endsWith('$$')) t = t.slice(2, -2).trim();
     else if (t.startsWith('$') && t.endsWith('$')) t = t.slice(1, -1).trim();
 
@@ -1873,6 +1862,40 @@
   // ==========================================
   // РЕДАКТОР БАЗЫ ВОПРОСОВ
   // ==========================================
+  function setQuestionMode(mode) { 
+    currentQuestionMode = mode; 
+    document.getElementById('q-text-wrapper').style.display = mode === 'text' ? 'block' : 'none'; 
+    document.getElementById('q-math-wrapper').style.display = mode === 'math' ? 'block' : 'none'; 
+    document.getElementById('btn-q-text').classList.toggle('active', mode === 'text'); 
+    document.getElementById('btn-q-math').classList.toggle('active', mode === 'math'); 
+  }
+
+  function insertQuestionSnippet(snippet) { 
+    const textarea = document.getElementById('input-question'); 
+    const start = textarea.selectionStart, end = textarea.selectionEnd, text = textarea.value; 
+    textarea.value = text.substring(0, start) + snippet + text.substring(end); 
+    textarea.focus(); 
+    textarea.selectionStart = textarea.selectionEnd = start + snippet.length; 
+  }
+
+  function setEditorAnswerMode(mode) { 
+    currentEditorMode = mode; 
+    document.getElementById('editor-math-wrapper').style.display = mode === 'math' ? 'block' : 'none'; 
+    document.getElementById('editor-text-wrapper').style.display = mode === 'text' ? 'block' : 'none'; 
+    document.getElementById('btn-editor-math').classList.toggle('active', mode === 'math'); 
+    document.getElementById('btn-editor-text').classList.toggle('active', mode === 'text'); 
+  }
+
+  function autoSelectEditorMode(subj) { 
+    setEditorAnswerMode(subj === 'Русский язык' ? 'text' : 'math'); 
+  }
+
+  function insertEditorMathTemplate(template) { 
+    const mf = document.getElementById('editor-math-field'); 
+    mf.executeCommand(['insert', template]); 
+    mf.focus(); 
+  }
+
   function setEditorSubject(subj, el) { 
     edSubject = subj; 
     document.querySelectorAll('#view-editor .subject-pills .pill').forEach(p => p.classList.remove('active')); 
@@ -1929,8 +1952,24 @@
     renderEditorList();
   }
 
-  function updateImagePreview(src) { const container = document.getElementById('image-preview-container'); const img = document.getElementById('preview-img-tag'); if (src && src.trim().length > 0) { img.src = src; container.style.display = 'flex'; currentUploadedImageBase64 = src; } else { container.style.display = 'none'; currentUploadedImageBase64 = ''; } }
-  function removeImage() { document.getElementById('input-image-url').value = ''; document.getElementById('file-upload-input').value = ''; updateImagePreview(''); }
+  function updateImagePreview(src) { 
+    const container = document.getElementById('image-preview-container'); 
+    const img = document.getElementById('preview-img-tag'); 
+    if (src && src.trim().length > 0) { 
+      img.src = src; 
+      container.style.display = 'flex'; 
+      currentUploadedImageBase64 = src; 
+    } else { 
+      container.style.display = 'none'; 
+      currentUploadedImageBase64 = ''; 
+    } 
+  }
+
+  function removeImage() { 
+    document.getElementById('input-image-url').value = ''; 
+    document.getElementById('file-upload-input').value = ''; 
+    updateImagePreview(''); 
+  }
 
   function handleFileUpload(e) {
     const file = e.target.files[0]; if (!file) return;
@@ -1949,47 +1988,61 @@
     }; reader.readAsDataURL(file);
   }
 
-  function setQuestionMode(mode) { currentQuestionMode = mode; document.getElementById('q-text-wrapper').style.display = mode === 'text' ? 'block' : 'none'; document.getElementById('q-math-wrapper').style.display = mode === 'math' ? 'block' : 'none'; document.getElementById('btn-q-text').classList.toggle('active', mode === 'text'); document.getElementById('btn-q-math').classList.toggle('active', mode === 'math'); }
-  function insertQuestionSnippet(snippet) { const textarea = document.getElementById('input-question'); const start = textarea.selectionStart, end = textarea.selectionEnd, text = textarea.value; textarea.value = text.substring(0, start) + snippet + text.substring(end); textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + snippet.length; }
-  function setEditorAnswerMode(mode) { currentEditorMode = mode; document.getElementById('editor-math-wrapper').style.display = mode === 'math' ? 'block' : 'none'; document.getElementById('editor-text-wrapper').style.display = mode === 'text' ? 'block' : 'none'; document.getElementById('btn-editor-math').classList.toggle('active', mode === 'math'); document.getElementById('btn-editor-text').classList.toggle('active', mode === 'text'); }
-  function autoSelectEditorMode(subj) { setEditorAnswerMode(subj === 'Русский язык' ? 'text' : 'math'); }
-  function insertEditorMathTemplate(template) { const mf = document.getElementById('editor-math-field'); mf.executeCommand(['insert', template]); mf.focus(); }
-
   function startEditing(id) {
     const card = deck.find(c => c.id === id); if (!card) return;
-    editingCardId = id; document.getElementById('input-subject').value = card.subject; document.getElementById('input-topic').value = card.topic;
-    setQuestionMode('text'); document.getElementById('input-question').value = card.question;
-    if (card.image_url) { document.getElementById('input-image-url').value = card.image_url; updateImagePreview(card.image_url); } else removeImage();
+    editingCardId = id; 
+    document.getElementById('input-subject').value = card.subject; 
+    document.getElementById('input-topic').value = card.topic;
+    setQuestionMode('text'); 
+    document.getElementById('input-question').value = card.question;
+    if (card.image_url) { 
+      document.getElementById('input-image-url').value = card.image_url; 
+      updateImagePreview(card.image_url); 
+    } else removeImage();
 
-    let ans = card.answer;
-    if (ans && (ans.includes('\\') || ans.includes('^'))) { setEditorAnswerMode('math'); document.getElementById('editor-math-field').setValue(ans); } 
-    else { setEditorAnswerMode('text'); if(ans.startsWith('\\text{') && ans.endsWith('}')) ans = ans.slice(6,-1); document.getElementById('editor-text-field').value = ans; }
+    let ans = card.answer || '';
+    if (ans && (ans.includes('\\') || ans.includes('^'))) { 
+      setEditorAnswerMode('math'); 
+      document.getElementById('editor-math-field').setValue(ans); 
+    } else { 
+      setEditorAnswerMode('text'); 
+      if(ans.startsWith('\\text{') && ans.endsWith('}')) ans = ans.slice(6,-1); 
+      document.getElementById('editor-text-field').value = ans; 
+    }
 
-    document.getElementById('save-card-btn').textContent = '💾 Обновить карточку'; document.getElementById('cancel-edit-card-btn').style.display = 'block';
+    document.getElementById('save-card-btn').textContent = '💾 Обновить карточку'; 
+    document.getElementById('cancel-edit-card-btn').style.display = 'block';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function cancelEditingCard() {
-    editingCardId = null; document.getElementById('card-add-form').reset();
-    document.getElementById('editor-math-field').setValue(''); document.getElementById('q-math-field').setValue('');
-    removeImage(); document.getElementById('save-card-btn').textContent = '+ Сохранить карточку'; document.getElementById('cancel-edit-card-btn').style.display = 'none';
+    editingCardId = null; 
+    document.getElementById('card-add-form').reset();
+    document.getElementById('editor-math-field').setValue(''); 
+    document.getElementById('q-math-field').setValue('');
+    removeImage(); 
+    document.getElementById('save-card-btn').textContent = '+ Сохранить карточку'; 
+    document.getElementById('cancel-edit-card-btn').style.display = 'none';
   }
 
   async function saveCardForm(e) {
-    e.preventDefault(); const btn = document.getElementById('save-card-btn');
-    const subject = document.getElementById('input-subject').value; const topic = document.getElementById('input-topic').value.trim();
+    e.preventDefault(); 
+    const btn = document.getElementById('save-card-btn');
+    const subject = document.getElementById('input-subject').value; 
+    const topic = document.getElementById('input-topic').value.trim();
     const question = currentQuestionMode === 'math' ? document.getElementById('q-math-field').getValue().trim() : document.getElementById('input-question').value.trim();
     const answer = currentEditorMode === 'math' ? document.getElementById('editor-math-field').getValue().trim() : document.getElementById('editor-text-field').value.trim();
     const image_url = currentUploadedImageBase64 || document.getElementById('input-image-url').value.trim() || null;
 
-    if (!subject || !topic || !question || !answer) return alert('Заполните поля!');
+    if (!subject || !topic || !question || !answer) return alert('Заполните все обязательные поля!');
     btn.disabled = true;
 
     try {
       if (editingCardId) {
         const { data, error } = await supabaseClient.from('cards').update({ subject, topic, question, answer, image_url }).eq('id', editingCardId).select();
         if (error) throw error;
-        const idx = deck.findIndex(c => c.id === editingCardId); if (idx !== -1 && data && data[0]) deck[idx] = data[0];
+        const idx = deck.findIndex(c => c.id === editingCardId); 
+        if (idx !== -1 && data && data[0]) deck[idx] = data[0];
         cancelEditingCard();
       } else {
         const { data, error } = await supabaseClient.from('cards').insert([{ subject, topic, question, answer, image_url }]).select();
@@ -1997,8 +2050,15 @@
         if (data && data[0]) deck.unshift(data[0]);
         cancelEditingCard();
       }
-      updatePracticeTopics(false); updateEditorTopics(false); filterPracticeDeck(); filterEditorDeck();
-    } catch (err) { alert('Ошибка: ' + err.message); } finally { btn.disabled = false; }
+      updatePracticeTopics(false); 
+      updateEditorTopics(false); 
+      filterPracticeDeck(); 
+      filterEditorDeck();
+    } catch (err) { 
+      alert('Ошибка сохранения карточки: ' + err.message); 
+    } finally { 
+      btn.disabled = false; 
+    }
   }
 
   async function deleteCard(id) {
@@ -2007,12 +2067,18 @@
       await supabaseClient.from('cards').delete().eq('id', id);
       if (editingCardId === id) cancelEditingCard();
       deck = deck.filter(item => item.id !== id);
-      updatePracticeTopics(false); updateEditorTopics(false); filterPracticeDeck(); filterEditorDeck();
-    } catch (err) { alert('Ошибка: ' + err.message); }
+      updatePracticeTopics(false); 
+      updateEditorTopics(false); 
+      filterPracticeDeck(); 
+      filterEditorDeck();
+    } catch (err) { 
+      alert('Ошибка при удалении карточки: ' + err.message); 
+    }
   }
 
   function renderEditorList() {
-    const list = document.getElementById('card-list'); list.innerHTML = '';
+    const list = document.getElementById('card-list'); 
+    list.innerHTML = '';
     if (filteredEditorDeck.length === 0) return list.innerHTML = '<div class="empty-state" style="padding:20px; text-align:center; color:var(--text-muted);">Нет карточек по выбранным разделам</div>';
 
     filteredEditorDeck.forEach((item, index) => {
