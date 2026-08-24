@@ -637,7 +637,7 @@
 
 <script>
   // ==========================================
-  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И НАСТРОЙКИ
+  // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
   // ==========================================
   const SUPABASE_URL = 'https://lhymatecnqucjdijmgww.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoeW1hdGVjbnF1Y2pkaWptZ3d3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzcyNTgsImV4cCI6MjEwMjU1MzI1OH0.IqlSb0aitLZ5mQUXlVaAfrDp0lwuaJlf2bIbVEb7Ffw';
@@ -1309,50 +1309,34 @@
     return fromDateStr;
   }
 
+  // Обновление выполнения повторяющихся задач без дублирования записей в базе
   async function toggleTaskStatus(id, currentStatus) {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
     const isRepeating = (task.repeat_type && task.repeat_type !== 'none') || task.is_shift;
 
-    if (isRepeating && currentStatus === 'todo') {
-      task.status = 'done';
-      let compDates = (task.completed_dates || '').split(',').filter(Boolean);
-      if (!compDates.includes(task.task_date)) compDates.push(task.task_date);
-      task.completed_dates = compDates.join(',');
+    if (isRepeating) {
+      if (currentStatus === 'todo') {
+        let compDates = (task.completed_dates || '').split(',').filter(Boolean);
+        if (!compDates.includes(task.task_date)) compDates.push(task.task_date);
+        task.completed_dates = compDates.join(',');
 
-      const nextDate = getNextOccurrenceDate(task, task.task_date);
-      const alreadyExists = tasks.some(t => t.title === task.title && t.task_date === nextDate && t.is_incubating);
+        const nextDate = getNextOccurrenceDate(task, task.task_date);
+        task.task_date = nextDate;
+        task.status = 'todo';
 
-      renderKanban();
-      renderCalendar();
-
-      try {
-        await supabaseClient.from('tasks').update({ status: 'done', completed_dates: task.completed_dates }).eq('id', id);
-        
-        if (!alreadyExists) {
-          const nextTaskPayload = {
-            title: task.title,
-            task_date: nextDate,
-            time_appear: task.time_appear || '00:00',
-            time_due: task.time_due || '23:59',
-            repeat_type: task.repeat_type,
-            repeat_days: task.repeat_days,
-            is_shift: task.is_shift,
-            cover: task.cover,
-            position: tasks.length + 1,
-            is_incubating: true,
-            status: 'todo',
-            completed_dates: ''
-          };
-          const { data } = await supabaseClient.from('tasks').insert([nextTaskPayload]).select();
-          if (data && data[0]) tasks.push(data[0]);
-        }
-        
         renderKanban();
         renderCalendar();
-      } catch(err) { console.error('Ошибка:', err); }
 
+        try {
+          await supabaseClient.from('tasks').update({ 
+            task_date: nextDate,
+            status: 'todo', 
+            completed_dates: task.completed_dates 
+          }).eq('id', id);
+        } catch(err) { console.error('Ошибка обновления задачи:', err); }
+      }
     } else {
       const newStatus = currentStatus === 'todo' ? 'done' : 'todo';
       task.status = newStatus;
@@ -1485,7 +1469,7 @@
   }
 
   // ==========================================
-  // КАЛЕНДАРЬ
+  // КАЛЕНДАРЬ & ГЛУБОКАЯ ОЧИСТКА ДУБЛИКАТОВ
   // ==========================================
   let calendarDate = new Date();
   calendarDate.setDate(1);
@@ -1500,39 +1484,38 @@
   }
 
   async function cleanCalendarDatabase() {
-    if (!confirm('Почистить календарь? Это удалит старые зачёркивания и пересчитает активный график.')) return;
+    if (!confirm('Почистить календарь? Это удалит повторяющиеся дубликаты задач и старый мусор.')) return;
     try {
-      const today = new Date();
-      const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
+      const { data: allTasks, error } = await supabaseClient.from('tasks').select('*');
+      if (error) throw error;
 
-      const validTasks = tasks.filter(t => t.status === 'todo' || t.status === 'done' || t.is_incubating);
-      
-      validTasks.forEach(t => {
-        if (t.status !== 'done') {
-          t.completed_dates = '';
+      // Дедупликация задач по названию
+      const uniqueMap = new Map();
+      const duplicateIds = [];
+
+      (allTasks || []).forEach(t => {
+        const key = t.title.trim().toLowerCase();
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, t);
+        } else {
+          duplicateIds.push(t.id);
         }
       });
 
-      await supabaseClient.from('tasks').delete().neq('id', 0);
-      if (validTasks.length > 0) {
-        const cleanPayload = validTasks.map(t => ({
-          title: t.title,
-          task_date: t.task_date,
-          time_appear: t.time_appear,
-          time_due: t.time_due,
-          repeat_type: t.repeat_type,
-          repeat_days: t.repeat_days,
-          is_shift: t.is_shift,
-          cover: t.cover,
-          status: t.status,
-          position: t.position,
-          is_incubating: t.is_incubating,
-          completed_dates: t.completed_dates
-        }));
-        await supabaseClient.from('tasks').insert(cleanPayload);
+      if (duplicateIds.length > 0) {
+        await supabaseClient.from('tasks').delete().in('id', duplicateIds);
       }
 
-      alert('Календарь успешно очищен!');
+      // Сбрасываем старые completed_dates у оставшихся незавершённых задач
+      const remainingTasks = Array.from(uniqueMap.values());
+      await Promise.all(remainingTasks.map(t => {
+        if (t.status !== 'done') {
+          return supabaseClient.from('tasks').update({ completed_dates: '' }).eq('id', t.id);
+        }
+        return Promise.resolve();
+      }));
+
+      alert('Календарь успешно очищен от дубликатов!');
       fetchTasks();
     } catch(err) {
       alert('Ошибка при очистке: ' + err.message);
@@ -1559,15 +1542,20 @@
     const todayStr = getLocalDateString(today.getFullYear(), today.getMonth(), today.getDate());
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const cellDate = new Date(year, month, day);
       const cellDateStr = getLocalDateString(year, month, day);
-      const cellDayOfWeek = cellDate.getDay().toString();
+      const cellDayOfWeek = new Date(year, month, day).getDay().toString();
       
       let isToday = cellDateStr === todayStr ? 'today' : '';
       let cellHtml = `<div class="cal-cell ${isToday}"><div class="cal-date">${day}</div>`;
 
+      // Защита от вывода одинаковых карточек в одной ячейке
+      const renderedTitlesInCell = new Set();
+
       tasks.forEach(task => {
         if (task.is_incubating && task.task_date !== cellDateStr) return;
+
+        const titleKey = task.title.trim().toLowerCase();
+        if (renderedTitlesInCell.has(titleKey)) return;
 
         let showTask = false;
         let isCompletedOnThisDay = false;
@@ -1619,6 +1607,7 @@
         }
 
         if (showTask) {
+          renderedTitlesInCell.add(titleKey);
           const isDone = isCompletedOnThisDay ? 'done' : '';
           const isShift = isShiftType ? 'shift' : '';
           let styleStr = '';
